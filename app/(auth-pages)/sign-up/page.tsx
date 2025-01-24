@@ -6,9 +6,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { SmtpMessage } from "../smtp-message";
 
-export default async function Signup(props: {
-  searchParams: Promise<Message>;
-}) {
+export default async function SignUp(props: { searchParams: Promise<Message> }) {
   const searchParams = await props.searchParams;
   if ("message" in searchParams) {
     return (
@@ -19,33 +17,39 @@ export default async function Signup(props: {
   }
 
   return (
-    <>
-      <form className="flex flex-col min-w-64 max-w-64 mx-auto">
-        <h1 className="text-2xl font-medium">Sign up</h1>
-        <p className="text-sm text text-foreground">
+    <form className="flex flex-col w-full gap-6">
+      <div className="flex flex-col gap-2 text-center">
+        <h1 className="text-2xl font-bold">Create an Account</h1>
+        <p className="text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link className="text-primary font-medium underline" href="/sign-in">
+          <Link className="text-purple-400 hover:text-purple-300 underline underline-offset-4" href="/sign-in">
             Sign in
           </Link>
         </p>
-        <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8">
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="email">Email</Label>
           <Input name="email" placeholder="you@example.com" required />
+        </div>
+        
+        <div className="flex flex-col gap-2">
           <Label htmlFor="password">Password</Label>
           <Input
             type="password"
             name="password"
-            placeholder="Your password"
-            minLength={6}
+            placeholder="••••••••"
             required
           />
-          <SubmitButton formAction={signUpAction} pendingText="Signing up...">
-            Sign up
-          </SubmitButton>
-          <FormMessage message={searchParams} />
         </div>
-      </form>
-      <SmtpMessage />
-    </>
+
+        <SubmitButton pendingText="Creating Account..." formAction={signUpAction}>
+          Create Account
+        </SubmitButton>
+        
+        <FormMessage message={searchParams} />
+      </div>
+    </form>
   );
 }

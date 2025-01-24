@@ -52,6 +52,14 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Primary Colors
+        deepBlue: "#0A192F",
+        electricBlue: "#00AEEF",
+        neonPurple: "#8A2BE2",
+        // Accent Colors
+        cyan: "#00FFFF",
+        magenta: "#FF00FF",
+        silver: "#C0C0C0",
       },
       borderRadius: {
         lg: "var(--radius)",

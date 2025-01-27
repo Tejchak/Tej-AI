@@ -22,7 +22,7 @@ export default async function SignUp(props: { searchParams: Promise<Message> }) 
         <h1 className="text-2xl font-bold">Create an Account</h1>
         <p className="text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link className="text-purple-400 hover:text-purple-300 underline underline-offset-4" href="/sign-in">
+          <Link className="text-blue-400 hover:text-blue-300 underline underline-offset-4" href="/sign-in">
             Sign in
           </Link>
         </p>
@@ -44,7 +44,11 @@ export default async function SignUp(props: { searchParams: Promise<Message> }) 
           />
         </div>
 
-        <SubmitButton pendingText="Creating Account..." formAction={signUpAction}>
+        <SubmitButton 
+          className="bg-blue-700 hover:bg-blue-600 text-white transition-colors"
+          pendingText="Creating Account..." 
+          formAction={signUpAction}
+        >
           Create Account
         </SubmitButton>
         

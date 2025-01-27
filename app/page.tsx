@@ -28,7 +28,7 @@ const glowingText = {
   hidden: { opacity: 0, textShadow: "0 0 0 rgba(255,255,255,0)" },
   visible: {
     opacity: 1,
-    textShadow: ["0 0 10px rgba(255,255,255,0.5)", "0 0 20px rgba(255,255,255,0.3)", "0 0 10px rgba(255,255,255,0.5)"],
+    textShadow: ["0 0 10px rgba(100,181,246,0.5)", "0 0 20px rgba(33,150,243,0.3)", "0 0 10px rgba(21,101,192,0.5)"],
     transition: {
       duration: 2,
       repeat: Number.POSITIVE_INFINITY,
@@ -58,7 +58,7 @@ const features = [
 
 function Features() {
   return (
-    <section id="features" className="py-20 px-4 sm:px-6 lg:px-8">
+    <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 relative">
       <motion.div
         className="max-w-7xl mx-auto"
         initial="hidden"
@@ -66,19 +66,19 @@ function Features() {
         viewport={{ once: true, amount: 0.2 }}
         variants={staggerChildren}
       >
-        <motion.h2 className="text-3xl sm:text-4xl font-bold text-center mb-12" variants={fadeInUp}>
+        <motion.h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-blue-100" variants={fadeInUp}>
           How It Works
         </motion.h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <motion.div
               key={index}
-              className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-filter backdrop-blur-lg"
+              className="bg-gradient-to-b from-blue-900/40 to-slate-900/40 rounded-lg p-6 backdrop-blur-lg border border-blue-800/20 shadow-lg"
               variants={fadeInUp}
             >
-              <feature.icon className="w-12 h-12 text-purple-400 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-300">{feature.description}</p>
+              <feature.icon className="w-12 h-12 text-blue-400 mb-4" />
+              <h3 className="text-xl font-semibold mb-2 text-blue-100">{feature.title}</h3>
+              <p className="text-blue-200">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -90,7 +90,7 @@ function Features() {
 // About Component
 function About() {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-900 to-indigo-900">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-950 to-slate-900">
       <motion.div
         className="max-w-4xl mx-auto text-center"
         initial="hidden"
@@ -98,14 +98,14 @@ function About() {
         viewport={{ once: true, amount: 0.2 }}
         variants={staggerChildren}
       >
-        <motion.h2 className="text-3xl sm:text-4xl font-bold mb-6" variants={fadeInUp}>
+        <motion.h2 className="text-3xl sm:text-4xl font-bold mb-6 text-blue-100" variants={fadeInUp}>
           About Our AI
         </motion.h2>
-        <motion.p className="text-lg mb-8" variants={fadeInUp}>
+        <motion.p className="text-lg mb-8 text-blue-200" variants={fadeInUp}>
           Our AI is built on cutting-edge technology, combining natural language processing, machine learning, and deep
           neural networks. It's designed to understand and respond to your queries with human-like intelligence.
         </motion.p>
-        <motion.p className="text-lg" variants={fadeInUp}>
+        <motion.p className="text-lg text-blue-200" variants={fadeInUp}>
           Whether you're looking for a coding assistant, a data analyst, or just a friendly chat, our AI is here to
           help. It's more than just a tool – it's your intelligent companion in the digital world.
         </motion.p>
@@ -143,19 +143,19 @@ function UseCases() {
         viewport={{ once: true, amount: 0.2 }}
         variants={staggerChildren}
       >
-        <motion.h2 className="text-3xl sm:text-4xl font-bold text-center mb-12" variants={fadeInUp}>
+        <motion.h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-blue-100" variants={fadeInUp}>
           Use Cases
         </motion.h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {useCases.map((useCase, index) => (
             <motion.div
               key={index}
-              className="bg-gradient-to-br from-purple-800 to-indigo-800 rounded-lg p-6 shadow-lg"
+              className="bg-gradient-to-br from-blue-900 to-slate-900 rounded-lg p-6 shadow-lg border border-blue-800/20"
               variants={fadeInUp}
             >
-              <useCase.icon className="w-12 h-12 text-purple-300 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">{useCase.title}</h3>
-              <p className="text-gray-300">{useCase.description}</p>
+              <useCase.icon className="w-12 h-12 text-blue-400 mb-4" />
+              <h3 className="text-xl font-semibold mb-2 text-blue-100">{useCase.title}</h3>
+              <p className="text-blue-200">{useCase.description}</p>
             </motion.div>
           ))}
         </div>
@@ -175,16 +175,16 @@ function CTA() {
         viewport={{ once: true, amount: 0.2 }}
         variants={staggerChildren}
       >
-        <motion.h2 className="text-3xl sm:text-4xl font-bold mb-6" variants={fadeInUp}>
+        <motion.h2 className="text-3xl sm:text-4xl font-bold mb-6 text-blue-100" variants={fadeInUp}>
           Be Among the First to Experience the Future of AI
         </motion.h2>
-        <motion.p className="text-xl mb-8" variants={fadeInUp}>
+        <motion.p className="text-xl mb-8 text-blue-200" variants={fadeInUp}>
           Our AI-powered platform is currently in beta testing. Join our exclusive group of early adopters and help
           shape the future of AI interaction.
         </motion.p>
         <motion.div variants={fadeInUp}>
           <Link href="/sign-up">
-            <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-full">
+            <Button className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-6 text-lg rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]">
               Join the Beta
             </Button>
           </Link>
@@ -197,28 +197,31 @@ function CTA() {
 // Rename the local Hero component to LandingHero
 function LandingHero() {
   return (
-    <section className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <motion.div className="text-center max-w-3xl mx-auto" initial="hidden" animate="visible" variants={staggerChildren}>
-        <motion.h1 className="text-4xl sm:text-6xl font-bold mb-6" variants={fadeInUp}>
+    <section className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 relative">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900 via-slate-900 to-black opacity-70"></div>
+      </div>
+      <motion.div className="text-center relative z-10" initial="hidden" animate="visible" variants={staggerChildren}>
+        <motion.h1 className="text-4xl sm:text-6xl font-bold mb-6 text-white" variants={fadeInUp}>
           Welcome to the Future of
           <motion.span
-            className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600"
+            className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300"
             variants={glowingText}
           >
             AI Interaction
           </motion.span>
         </motion.h1>
-        <motion.p className="text-xl sm:text-2xl mb-12 max-w-2xl mx-auto text-gray-200" variants={fadeInUp}>
+        <motion.p className="text-xl sm:text-2xl mb-12 max-w-2xl mx-auto text-blue-50" variants={fadeInUp}>
           Experience natural conversations, personalized interactions, and powerful code analysis with our cutting-edge AI.
         </motion.p>
         <motion.div className="flex items-center justify-center gap-4" variants={fadeInUp}>
           <Link href="/sign-in">
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg rounded-xl">
+            <Button className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-6 text-lg rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]">
               Sign In
             </Button>
           </Link>
           <Link href="/sign-up">
-            <Button className="bg-transparent border-2 border-purple-600 hover:bg-purple-600/20 text-white px-8 py-6 text-lg rounded-xl">
+            <Button className="bg-transparent border-2 border-blue-500 hover:bg-blue-500/20 text-white px-8 py-6 text-lg rounded-full">
               Sign Up
             </Button>
           </Link>
@@ -230,8 +233,9 @@ function LandingHero() {
 
 export default function Home() {
   return (
-    <main className="min-h-screen overflow-x-hidden flex flex-col items-center justify-center">
-      <div className="w-full max-w-[1920px]">
+    <main className="min-h-screen overflow-x-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900 via-slate-900 to-black -z-10"></div>
+      <div className="relative z-0">
         <LandingHero />
         <Features />
         <About />

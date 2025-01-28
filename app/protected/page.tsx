@@ -39,9 +39,17 @@ export default function ChatPage() {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isClient, setIsClient] = useState(false)
   const supabase = createClient()
 
+  // Set isClient to true when component mounts
   useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isClient) return; // Don't run on server-side
+
     const initializeChat = async () => {
       try {
         // Check authentication first
@@ -80,7 +88,12 @@ export default function ChatPage() {
           .order('timestamp', { ascending: true })
 
         if (messages) {
-          setMessages(messages)
+          // Format timestamps before setting state
+          const formattedMessages = messages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp).toISOString()
+          }))
+          setMessages(formattedMessages)
         }
       } catch (error) {
         console.error('Failed to initialize chat:', error)
@@ -88,27 +101,17 @@ export default function ChatPage() {
     }
 
     initializeChat()
-  }, [])
+  }, [isClient]) // Only run when isClient changes
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputMessage.trim() || !currentSessionId || isLoading) return
 
     setIsLoading(true)
-    const messageText = inputMessage
+    const messageText = inputMessage.trim()
     setInputMessage("")
 
     try {
-      // Optimistically add user message
-      const userMessage = {
-        id: uuidv4(),
-        content: messageText,
-        sender: "user",
-        timestamp: new Date().toISOString()
-      }
-      setMessages(prev => [...prev, userMessage])
-
-      // Send to API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -126,33 +129,36 @@ export default function ChatPage() {
 
       const data = await response.json()
       
-      if (data.message) {
-        const aiMessage = {
+      // Add the new messages to the state with properly formatted timestamps
+      const newMessages = [
+        {
+          id: uuidv4(),
+          content: messageText,
+          sender: 'user',
+          timestamp: new Date().toISOString()
+        },
+        {
           id: uuidv4(),
           content: data.message,
-          sender: "assistant",
+          sender: 'assistant',
           timestamp: new Date().toISOString()
         }
-        setMessages(prev => [...prev, aiMessage])
-      }
+      ]
+
+      setMessages(prev => [...prev, ...newMessages])
     } catch (error) {
       console.error('Error sending message:', error)
-      // Optionally show error to user
+      setInputMessage(messageText) // Restore the message if it failed
     } finally {
       setIsLoading(false)
     }
   }
 
-  const selectSession = (sessionId: string) => {
-    setCurrentSessionId(sessionId)
-  }
-
-  const handleSignOut = async () => {
-    try {
-      await signOutAction()
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
+  // If we're server-side or not yet initialized, show a loading state
+  if (!isClient) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
   }
 
   return (
@@ -237,6 +243,9 @@ export default function ChatPage() {
               )}
             >
               {message.content}
+              <span className="text-xs opacity-70">
+                {new Date(message.timestamp).toLocaleTimeString()}
+              </span>
             </div>
           ))}
           {messages.length === 0 && (

@@ -56,15 +56,34 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
+  // Get current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error) {
+        console.error('Error getting user:', error)
+        return
+      }
+      if (user) {
+        setUserId(user.id)
+      }
+    }
+    getCurrentUser()
+  }, [])
+
   // Load chat sessions
   const loadChatSessions = async () => {
+    if (!userId) return
+
     try {
       const { data: sessions, error } = await supabase
         .from('chat_sessions')
         .select('*')
+        .eq('user_id', userId)
         .order('timestamp', { ascending: false })
       
       if (error) {
@@ -109,7 +128,7 @@ export default function ChatPage() {
   // Load chat sessions on mount
   useEffect(() => {
     loadChatSessions()
-  }, [])
+  }, [userId])
 
   // Load messages when session changes
   useEffect(() => {
@@ -176,78 +195,97 @@ export default function ChatPage() {
     setMessages([]) // Clear messages before loading new ones
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inputMessage.trim() || isLoading) return
-
-    const messageText = inputMessage
-    setInputMessage("")
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading || !userId) return
+    
     setIsLoading(true)
+    const messageId = uuidv4()
+    const timestamp = new Date().toISOString()
 
-    // Add user message immediately
-    const userMessage = {
-      id: uuidv4(),
-      content: messageText,
-      sender: 'user',
-      timestamp: new Date().toISOString()
+    // Create a new session if none exists
+    const sessionId = currentSessionId || uuidv4()
+    if (!currentSessionId) {
+      setCurrentSessionId(sessionId)
     }
-    setMessages(prev => [...prev, userMessage])
+
+    // Add user message to UI
+    const userMessage: Message = {
+      id: messageId,
+      content: inputMessage,
+      sender: 'user',
+      timestamp
+    }
+
+    setMessages(prevMessages => [...prevMessages, userMessage])
+    setInputMessage("")
 
     try {
-      // If no session exists, create one first
-      let sessionId = currentSessionId
-      if (!sessionId) {
-        const response = await fetch('/api/chat/session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+      // Save user message to database
+      const { error: saveError } = await supabase
+        .from('chat_sessions')
+        .insert({
+          session_id: sessionId,
+          content: inputMessage,
+          sender: 'user',
+          timestamp,
+          title: inputMessage.slice(0, 50),
+          user_id: userId
         })
-        
-        if (!response.ok) {
-          throw new Error('Failed to create session')
-        }
-        
-        const data = await response.json()
-        sessionId = data.sessionId
-        setCurrentSessionId(sessionId)
+
+      if (saveError) {
+        console.error('Error saving message:', saveError)
+        return
       }
 
+      // Get AI response
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: messageText,
-          sessionId: sessionId
-        })
+          message: inputMessage,
+          sessionId,
+          userId
+        }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to send message')
+        throw new Error('Failed to get response')
       }
 
       const data = await response.json()
       
-      // Add AI response while preserving existing messages
-      const aiMessage = {
+      // Add AI response to UI
+      const aiMessage: Message = {
         id: uuidv4(),
-        content: data.message,
+        content: data.response,
         sender: 'assistant',
-        timestamp: data.timestamp || new Date().toISOString()
+        timestamp: new Date().toISOString()
       }
 
-      setMessages(prev => [...prev, aiMessage])
-      
-      // Refresh chat sessions to show the new chat with its title
-      await loadChatSessions()
+      setMessages(prevMessages => [...prevMessages, aiMessage])
+
+      // Save AI response to database
+      const { error: aiSaveError } = await supabase
+        .from('chat_sessions')
+        .insert({
+          session_id: sessionId,
+          content: data.response,
+          sender: 'Machine',
+          timestamp: new Date().toISOString(),
+          title: inputMessage.slice(0, 50),
+          user_id: userId
+        })
+
+      if (aiSaveError) {
+        console.error('Error saving AI response:', aiSaveError)
+      }
+
+      // Reload chat sessions to update the list
+      loadChatSessions()
     } catch (error) {
-      console.error('Error sending message:', error)
-      // Remove the user message if AI response failed
-      setMessages(prev => prev.filter(msg => msg.id !== userMessage.id))
-      setInputMessage(messageText) // Restore the message if it failed
+      console.error('Error:', error)
     } finally {
       setIsLoading(false)
     }
@@ -414,12 +452,12 @@ export default function ChatPage() {
 
         {/* Input Area */}
         <div className="border-t border-gray-800 p-4 bg-gray-900">
-          <form onSubmit={handleSubmit} className="flex items-center">
+          <form onSubmit={(e) => { e.preventDefault(); handleSendMessage() }} className="flex items-center">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Message ChatGPT..."
+              placeholder="Message AI..."
               className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
             />

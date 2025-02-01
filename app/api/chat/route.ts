@@ -14,9 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { message, sessionId } = requestBody
-    if (!message?.trim() || !sessionId) {
-      return NextResponse.json({ error: 'Message and sessionId are required' }, { status: 400 })
+    const { message, sessionId, userId } = requestBody
+    if (!message?.trim() || !sessionId || !userId) {
+      return NextResponse.json({ error: 'Message, sessionId, and userId are required' }, { status: 400 })
     }
 
     // Get the authenticated user

@@ -63,11 +63,22 @@ export async function POST(request: Request) {
         'Authorization': `Bearer ${langflowApiKey}`
       },
       body: JSON.stringify({
-        messages: [{
-          content: message,
-          role: "user"
-        }],
-        stream: false
+        input_value: message,
+        output_type: "chat",
+        input_type: "chat",
+        tweaks: {
+          "OpenAIToolsAgent-FJkgE": {},
+          "PythonREPLTool-trBxe": {},
+          "YahooFinanceTool-vPwJs": {},
+          "WikipediaAPI-Czz1N": {},
+          "OpenAIModel-4oJMD": {},
+          "ChatInput-PcmTm": {
+            "session_id": sessionId
+          },
+          "Prompt-fTO3j": {},
+          "ChatOutput-L5AHB": {},
+          "PerplexityModel-SEw4i": {}
+        }
       })
     })
 
@@ -76,7 +87,9 @@ export async function POST(request: Request) {
       console.error('Langflow API error:', {
         status: response.status,
         statusText: response.statusText,
-        body: errorText
+        body: errorText,
+        url: response.url,
+        headers: Object.fromEntries(response.headers)
       })
       return NextResponse.json(
         { error: 'Failed to get response from AI service', details: errorText },
@@ -84,21 +97,34 @@ export async function POST(request: Request) {
       )
     }
 
-    // Log the response status and body
-    console.log('Langflow API response status:', response.status)
+    // Parse the response
     const responseBody = await response.json()
-    console.log('Langflow API response structure:', Object.keys(responseBody))
+    
+    // Extract the AI message from the response
+    const aiMessage = responseBody.outputs?.[0]?.outputs?.[0]?.artifacts?.message
+    const timestamp = responseBody.outputs?.[0]?.outputs?.[0]?.results?.message?.timestamp || new Date().toISOString()
 
-    // Store the message in Supabase
+    // Store both user and AI messages in Supabase
     const { error: dbError } = await supabase
       .from('chat_sessions')
       .insert([
+        // User message
         {
           session_id: sessionId,
           user_id: user.id,
           timestamp: new Date().toISOString(),
           sender: user.email || 'user',
-          content: message
+          content: message,
+          sender_name: 'User'
+        },
+        // AI response
+        {
+          session_id: sessionId,
+          user_id: user.id,
+          timestamp: timestamp,
+          sender: 'Machine',
+          content: aiMessage,
+          sender_name: 'AI'
         }
       ])
 
@@ -107,7 +133,14 @@ export async function POST(request: Request) {
       // Continue anyway since we have the AI response
     }
 
-    return NextResponse.json({ message: responseBody.message || responseBody.choices?.[0]?.message?.content })
+    return NextResponse.json({
+      message: aiMessage,
+      timestamp,
+      sender: 'Machine',
+      sender_name: 'AI',
+      session_id: sessionId,
+      flow_id: responseBody.session_id
+    })
   } catch (error) {
     console.error('Chat error:', error)
     return NextResponse.json(

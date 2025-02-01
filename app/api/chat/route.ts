@@ -1,135 +1,101 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createServerClient } from "@supabase/ssr";
 
 export async function POST(request: Request) {
   try {
-    // Log environment variables (without exposing sensitive data)
-    console.log('Environment check:', {
-      hasLangflowUrl: !!process.env.LANGFLOW_API_URL,
-      hasLangflowKey: !!process.env.LANGFLOW_API_KEY
-    })
-
-    // Check for required environment variables
-    const langflowApiUrl = process.env.LANGFLOW_API_URL?.trim()
-    const langflowApiKey = process.env.LANGFLOW_API_KEY?.trim()
-
-    if (!langflowApiUrl || !langflowApiKey) {
-      console.error('Missing environment variables:', {
-        hasUrl: !!langflowApiUrl,
-        hasKey: !!langflowApiKey
-      })
-      return NextResponse.json(
-        { error: 'Server configuration error - missing Langflow API credentials' },
-        { status: 500 }
-      )
-    }
-
-    // Validate URL format
-    try {
-      new URL(langflowApiUrl)
-    } catch (error) {
-      console.error('Invalid Langflow API URL:', error)
-      return NextResponse.json(
-        { error: 'Server configuration error - invalid Langflow API URL' },
-        { status: 500 }
-      )
-    }
-
-    const requestData = await request.json()
-    console.log('Request data:', {
-      hasMessage: !!requestData.message,
-      hasSessionId: !!requestData.sessionId
-    })
-
-    const { message, sessionId } = requestData
     const cookieStore = cookies()
-    const supabase = await createClient()
+    const supabase = await createClient(cookieStore)
+    let requestBody;
+    
+    try {
+      requestBody = await request.json()
+    } catch (error) {
+      console.error('Error parsing request body:', error)
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
 
+    const { message, sessionId } = requestBody
+    if (!message?.trim() || !sessionId) {
+      return NextResponse.json({ error: 'Message and sessionId are required' }, { status: 400 })
+    }
+
+    // Get the authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.error('Auth error:', userError)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
     }
 
-    console.log('Attempting Langflow API call to:', langflowApiUrl)
-    
+    // Create chat title from the message
+    const chatTitle = message.length > 30 ? message.substring(0, 30) + '...' : message
+
+    // First save the user's message
+    console.log('Saving user message to Supabase:', { sessionId, message })
+    const { error: userMessageError } = await supabase
+      .from('chat_sessions')
+      .insert({
+        session_id: sessionId,
+        user_id: user.id,
+        timestamp: new Date().toISOString(),
+        title: chatTitle,
+        sender: user.email || 'user',
+        content: message
+      })
+
+    if (userMessageError) {
+      console.error('Error saving user message:', userMessageError)
+      return NextResponse.json({ error: 'Failed to save user message' }, { status: 500 })
+    }
+
     // Call Langflow API
-    const response = await fetch(langflowApiUrl, {
+    console.log('Calling Langflow API...')
+    const response = await fetch(process.env.LANGFLOW_API_URL!, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${langflowApiKey}`
+        'Authorization': `Bearer ${process.env.LANGFLOW_API_KEY}`
       },
       body: JSON.stringify({
         input_value: message,
         output_type: "chat",
         input_type: "chat",
-        tweaks: {
-          "OpenAIToolsAgent-FJkgE": {},
-          "PythonREPLTool-trBxe": {},
-          "YahooFinanceTool-vPwJs": {},
-          "WikipediaAPI-Czz1N": {},
-          "OpenAIModel-4oJMD": {},
-          "ChatInput-PcmTm": {
-            "session_id": sessionId
-          },
-          "Prompt-fTO3j": {},
-          "ChatOutput-L5AHB": {},
-          "PerplexityModel-SEw4i": {}
-        }
+        tweaks: {}
       })
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Langflow API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText,
-        url: response.url,
-        headers: Object.fromEntries(response.headers)
-      })
-      return NextResponse.json(
-        { error: 'Failed to get response from AI service', details: errorText },
-        { status: response.status }
-      )
+      console.error('Langflow API error:', response.status)
+      return NextResponse.json({ error: 'Failed to get AI response' }, { status: 500 })
     }
 
-    // Parse the response
     const responseBody = await response.json()
-    
-    // Extract the AI message from the response
-    const aiMessage = responseBody.outputs?.[0]?.outputs?.[0]?.artifacts?.message
+    console.log('Langflow API response:', JSON.stringify(responseBody, null, 2))
+
+    // Extract the AI message and timestamp
     const timestamp = responseBody.outputs?.[0]?.outputs?.[0]?.results?.message?.timestamp || new Date().toISOString()
+    const aiMessage = responseBody.outputs?.[0]?.outputs?.[0]?.artifacts?.message
 
-    // Store both user and AI messages in Supabase
-    const { error: dbError } = await supabase
+    if (!aiMessage) {
+      console.error('No message in Langflow response:', responseBody)
+      return NextResponse.json({ error: 'Invalid response from AI' }, { status: 500 })
+    }
+
+    // Save AI response
+    console.log('Saving AI response to Supabase:', aiMessage)
+    const { error: aiMessageError } = await supabase
       .from('chat_sessions')
-      .insert([
-        // User message
-        {
-          session_id: sessionId,
-          user_id: user.id,
-          timestamp: new Date().toISOString(),
-          sender: user.email || 'user',
-          content: message,
-          sender_name: 'User'
-        },
-        // AI response
-        {
-          session_id: sessionId,
-          user_id: user.id,
-          timestamp: timestamp,
-          sender: 'Machine',
-          content: aiMessage,
-          sender_name: 'AI'
-        }
-      ])
+      .insert({
+        session_id: sessionId,
+        user_id: user.id,
+        timestamp: timestamp,
+        title: chatTitle,
+        sender: 'Machine',
+        content: aiMessage
+      })
 
-    if (dbError) {
-      console.error('Database error:', dbError)
+    if (aiMessageError) {
+      console.error('Error saving AI message:', aiMessageError)
       // Continue anyway since we have the AI response
     }
 
@@ -137,15 +103,13 @@ export async function POST(request: Request) {
       message: aiMessage,
       timestamp,
       sender: 'Machine',
-      sender_name: 'AI',
       session_id: sessionId,
       flow_id: responseBody.session_id
     })
   } catch (error) {
     console.error('Chat error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ 
+      error: 'Internal Server Error: ' + (error as Error).message 
+    }, { status: 500 })
   }
 }

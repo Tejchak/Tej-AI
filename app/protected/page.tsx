@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { Send, MessageSquare, Image, FileText, BarChart3, Clock, Settings, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -36,30 +36,123 @@ const staggerChildren = {
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
-  const [currentSessionId, setCurrentSessionId] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isClient, setIsClient] = useState(false)
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
-  // Set isClient to true when component mounts
+  // Load chat sessions
+  const loadChatSessions = async () => {
+    try {
+      const { data: sessions, error } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .order('timestamp', { ascending: false })
+      
+      if (error) {
+        console.error('Error loading chat sessions:', error)
+        return
+      }
+
+      // Group messages by session_id and use the first message's title
+      const groupedSessions = sessions.reduce((acc: any, curr) => {
+        if (!acc[curr.session_id]) {
+          acc[curr.session_id] = {
+            id: curr.session_id,
+            title: curr.title,
+            timestamp: curr.timestamp,
+            messages: []
+          }
+        }
+        acc[curr.session_id].messages.push(curr)
+        return acc
+      }, {})
+
+      // Convert to array and sort by latest message
+      const sessionArray = Object.values(groupedSessions)
+      sessionArray.sort((a: any, b: any) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+
+      setChatSessions(sessionArray)
+    } catch (error) {
+      console.error('Error loading chat sessions:', error)
+    }
+  }
+
+  // Load chat sessions on mount
   useEffect(() => {
-    setIsClient(true)
+    loadChatSessions()
   }, [])
 
+  // Load messages when session changes
   useEffect(() => {
-    if (!isClient) return; // Don't run on server-side
+    const loadMessages = async () => {
+      if (!currentSessionId) return
+      
+      const { data: messages, error } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('session_id', currentSessionId)
+        .order('timestamp', { ascending: true })
 
-    const initializeChat = async () => {
-      try {
-        // Check authentication first
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          redirect('/sign-in')
-          return
-        }
+      if (error) {
+        console.error('Error loading messages:', error)
+        return
+      }
 
-        // Create a new session
+      setMessages(messages.map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        sender: msg.sender === 'Machine' ? 'assistant' : 'user',
+        timestamp: msg.timestamp
+      })))
+    }
+
+    loadMessages()
+  }, [currentSessionId])
+
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const startNewChat = () => {
+    setCurrentSessionId(null)  // Clear the current session
+    setMessages([])         // Clear messages
+  }
+
+  const selectSession = async (sessionId: string) => {
+    setCurrentSessionId(sessionId)
+    setMessages([]) // Clear messages before loading new ones
+  }
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inputMessage.trim() || isLoading) return
+
+    setIsLoading(true)
+    const messageText = inputMessage.trim()
+    setInputMessage("")
+
+    // Add user message immediately
+    const userMessage = {
+      id: uuidv4(),
+      content: messageText,
+      sender: 'user',
+      timestamp: new Date().toISOString()
+    }
+    setMessages(prev => [...prev, userMessage])
+
+    try {
+      // If no session exists, create one first
+      let sessionId = currentSessionId
+      if (!sessionId) {
         const response = await fetch('/api/chat/session', {
           method: 'POST',
           headers: {
@@ -68,50 +161,14 @@ export default function ChatPage() {
         })
         
         if (!response.ok) {
-          console.error('Failed to create session:', await response.text())
-          return
+          throw new Error('Failed to create session')
         }
         
         const data = await response.json()
-        if (!data.sessionId) {
-          console.error('No session ID returned')
-          return
-        }
-
-        setCurrentSessionId(data.sessionId)
-        
-        // Load existing messages
-        const { data: messages } = await supabase
-          .from('chat_sessions')
-          .select('*')
-          .eq('session_id', data.sessionId)
-          .order('timestamp', { ascending: true })
-
-        if (messages) {
-          // Format timestamps before setting state
-          const formattedMessages = messages.map(msg => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp).toISOString()
-          }))
-          setMessages(formattedMessages)
-        }
-      } catch (error) {
-        console.error('Failed to initialize chat:', error)
+        sessionId = data.sessionId
+        setCurrentSessionId(sessionId)
       }
-    }
 
-    initializeChat()
-  }, [isClient]) // Only run when isClient changes
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inputMessage.trim() || !currentSessionId || isLoading) return
-
-    setIsLoading(true)
-    const messageText = inputMessage.trim()
-    setInputMessage("")
-
-    try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -119,35 +176,33 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           message: messageText,
-          sessionId: currentSessionId
+          sessionId: sessionId
         })
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send message')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send message')
       }
 
       const data = await response.json()
       
-      // Add the new messages to the state with properly formatted timestamps
-      const newMessages = [
-        {
-          id: uuidv4(),
-          content: messageText,
-          sender: 'user',
-          timestamp: new Date().toISOString()
-        },
-        {
-          id: uuidv4(),
-          content: data.message,
-          sender: 'assistant',
-          timestamp: new Date().toISOString()
-        }
-      ]
+      // Add AI response after receiving it
+      const aiMessage = {
+        id: uuidv4(),
+        content: data.message,
+        sender: 'assistant',
+        timestamp: data.timestamp || new Date().toISOString()
+      }
 
-      setMessages(prev => [...prev, ...newMessages])
+      setMessages(prev => [...prev, aiMessage])
+      
+      // Refresh chat sessions to show the new chat with its title
+      await loadChatSessions()
     } catch (error) {
       console.error('Error sending message:', error)
+      // Remove the user message if AI response failed
+      setMessages(prev => prev.filter(msg => msg.id !== userMessage.id))
       setInputMessage(messageText) // Restore the message if it failed
     } finally {
       setIsLoading(false)
@@ -155,162 +210,133 @@ export default function ChatPage() {
   }
 
   // If we're server-side or not yet initialized, show a loading state
-  if (!isClient) {
+  if (!supabase) {
     return <div className="flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
     </div>
   }
 
   return (
-    <div className="flex h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900 via-slate-900 to-black">
+    <div className="flex h-screen">
       {/* Sidebar */}
-      <motion.div 
-        initial="hidden"
-        animate="visible"
-        variants={fadeInUp}
-        className="w-64 bg-slate-900/50 border-r border-blue-900/20 flex flex-col backdrop-blur-xl"
-      >
-        {/* New Chat Button */}
-        <div className="p-4">
-          <Button
-            onClick={() => {}}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg py-2 px-4 flex items-center justify-center gap-2 transition-colors"
-          >
-            <MessageSquare className="w-4 h-4" />
-            New Chat
-          </Button>
-        </div>
+      <div className="w-64 bg-gray-900 text-white p-4 flex flex-col">
+        <button
+          onClick={startNewChat}
+          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded flex items-center justify-center mb-4"
+        >
+          <MessageSquare className="h-5 w-5 mr-2" />
+          New Chat
+        </button>
 
-        {/* Chat History */}
+        <div className="text-sm text-gray-400 mb-2">Recent Chats</div>
         <div className="flex-1 overflow-y-auto">
-          <div className="px-4 py-2">
-            <h2 className="text-blue-100 text-sm font-semibold mb-2">Recent Chats</h2>
-            {chatSessions.map((chat) => (
-              <button
-                key={chat.id}
-                onClick={() => selectSession(chat.id)}
-                className={cn(
-                  "w-full text-left p-2 rounded-lg hover:bg-blue-800/20 text-blue-100 text-sm mb-1 transition-colors",
-                  currentSessionId === chat.id && "bg-blue-800/30"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="truncate">{chat.title}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          {chatSessions.map((session) => (
+            <button
+              key={session.id}
+              onClick={() => selectSession(session.id)}
+              className={`w-full text-left p-2 hover:bg-gray-800 rounded ${
+                currentSessionId === session.id ? 'bg-gray-800' : ''
+              }`}
+            >
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                <span className="truncate">{session.title || 'New Chat'}</span>
+              </div>
+            </button>
+          ))}
         </div>
 
-        {/* Settings/Sign Out Section */}
-        <div className="p-4 border-t border-blue-900/20 flex flex-col gap-2">
-          <button 
-            className="w-full text-blue-100 hover:bg-blue-800/20 rounded-lg py-2 px-4 flex items-center gap-2 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Settings
-          </button>
+        <div className="mt-auto">
           <form action={signOutAction}>
             <button
               type="submit"
-              className="w-full text-red-300 hover:bg-red-500/10 rounded-lg py-2 px-4 flex items-center gap-2 transition-colors"
+              className="w-full flex items-center p-2 hover:bg-gray-800 rounded text-red-400"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="h-5 w-5 mr-2" />
               Sign Out
             </button>
           </form>
         </div>
-      </motion.div>
+      </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Chat Messages */}
-        <motion.div 
-          className="flex-1 overflow-y-auto p-4 scroll-smooth"
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-        >
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "mb-4 p-4 rounded-lg max-w-3xl",
-                message.sender === "user"
-                  ? "ml-auto bg-blue-600 text-white"
-                  : "bg-slate-800/50 text-blue-100 backdrop-blur-sm"
-              )}
-            >
-              {message.content}
-              <span className="text-xs opacity-70">
-                {new Date(message.timestamp).toLocaleTimeString()}
-              </span>
+        {messages.length === 0 ? (
+          // Welcome screen
+          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-950">
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="text-center p-4">
+                <Image className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <div className="text-sm text-gray-300">Create and edit images</div>
+              </div>
+              <div className="text-center p-4">
+                <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <div className="text-sm text-gray-300">Write and format text</div>
+              </div>
+              <div className="text-center p-4">
+                <BarChart3 className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <div className="text-sm text-gray-300">Analyze data</div>
+              </div>
+              <div className="text-center p-4">
+                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <div className="text-sm text-gray-300">Answer questions</div>
+              </div>
             </div>
-          ))}
-          {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-blue-100">
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="text-center p-4 bg-slate-800/50 rounded-lg backdrop-blur-sm">
-                  <Image className="w-6 h-6 mx-auto mb-2" />
-                  <p>Create and edit images</p>
-                </div>
-                <div className="text-center p-4 bg-slate-800/50 rounded-lg backdrop-blur-sm">
-                  <FileText className="w-6 h-6 mx-auto mb-2" />
-                  <p>Write and format text</p>
-                </div>
-                <div className="text-center p-4 bg-slate-800/50 rounded-lg backdrop-blur-sm">
-                  <BarChart3 className="w-6 h-6 mx-auto mb-2" />
-                  <p>Analyze data</p>
-                </div>
-                <div className="text-center p-4 bg-slate-800/50 rounded-lg backdrop-blur-sm">
-                  <MessageSquare className="w-6 h-6 mx-auto mb-2" />
-                  <p>Answer questions</p>
+            <h2 className="text-xl text-gray-300 mb-4">How can I help you today?</h2>
+          </div>
+        ) : (
+          // Chat messages
+          <div className="flex-1 overflow-y-auto p-4 bg-gray-950">
+            {messages.map((message, index) => (
+              <div
+                key={message.id}
+                className={`mb-4 flex ${
+                  message.sender === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`rounded-lg p-3 max-w-[80%] ${
+                    message.sender === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-800 text-gray-100'
+                  }`}
+                >
+                  {message.content}
                 </div>
               </div>
-              <p className="text-xl font-semibold">How can I help you today?</p>
-            </div>
-          )}
-        </motion.div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
 
         {/* Input Area */}
-        <motion.div 
-          className="p-4 border-t border-blue-900/20"
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-        >
-          <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative">
+        <div className="border-t border-gray-800 p-4 bg-gray-900">
+          <form onSubmit={handleSendMessage} className="flex items-center">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSendMessage(e as unknown as React.FormEvent)
-                }
-              }}
               placeholder="Message ChatGPT..."
-              className="w-full bg-slate-800/50 text-blue-100 rounded-lg pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm"
-              disabled={isLoading || !currentSessionId}
+              className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
             />
-            <Button
+            <button
               type="submit"
-              disabled={isLoading || !currentSessionId}
-              onClick={(e) => {
-                e.preventDefault()
-                handleSendMessage(e as unknown as React.FormEvent)
-              }}
-              className={cn(
-                "absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-400 hover:text-blue-300",
-                (isLoading || !currentSessionId) && "opacity-50 cursor-not-allowed"
-              )}
+              disabled={isLoading || !inputMessage.trim()}
+              className={`rounded-lg p-2 ${
+                isLoading || !inputMessage.trim()
+                  ? 'bg-gray-700 text-gray-400'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
             >
-              <Send className="w-5 h-5" />
-            </Button>
+              {isLoading ? (
+                <Clock className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </button>
           </form>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

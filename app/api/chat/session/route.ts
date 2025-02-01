@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto'
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies()
-    const supabase = await createClient()
+    const supabase = await createClient(cookieStore)
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     

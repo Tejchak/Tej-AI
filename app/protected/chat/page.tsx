@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { SendIcon, UserIcon, BotIcon, MenuIcon, XIcon, PlusIcon } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,26 +15,12 @@ interface Message {
   timestamp: Date;
 }
 
-interface ChatSession {
-  id: string;
-  title: string;
-  last_message_date: Date;
-}
-
 const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
-
-  useEffect(() => {
-    fetchChatSessions();
-    newChat();
-  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -42,30 +28,6 @@ const ChatPage = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const fetchChatSessions = async () => {
-    const { data, error } = await supabase
-      .from('chat_sessions')
-      .select('session_id, title, timestamp')
-      .order('timestamp', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching chat sessions:', error);
-    } else {
-      const uniqueSessions = data.map(session => ({
-        id: session.session_id,
-        title: session.title,
-        last_message_date: new Date(session.timestamp),
-      }));
-      setChatSessions(uniqueSessions);
-    }
-  };
-
-  const newChat = () => {
-    const sessionId = uuidv4();
-    setCurrentSessionId(sessionId);
-    setMessages([]);
   };
 
   const handleSendMessage = async () => {
@@ -90,23 +52,31 @@ const ChatPage = () => {
         },
         body: JSON.stringify({
           message: inputMessage,
-          sessionId: currentSessionId,
+          sessionId: 'your-session-id', // Replace with actual session ID
         }),
       });
 
       const data = await response.json();
 
-      if (data.message) {
-        const aiResponse: Message = {
-          id: uuidv4(),
-          content: data.message,
-          sender: 'ai',
-          timestamp: new Date(),
-        };
-        setMessages(prevMessages => [...prevMessages, aiResponse]);
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
+
+      const aiResponse: Message = {
+        id: uuidv4(),
+        content: data.message,
+        sender: 'ai',
+        timestamp: new Date(),
+      };
+      setMessages(prevMessages => [...prevMessages, aiResponse]);
     } catch (error) {
       console.error('Error calling chat API:', error);
+      setMessages(prevMessages => [...prevMessages, {
+        id: uuidv4(),
+        content: `Error: ${(error as Error).message}`,
+        sender: 'ai',
+        timestamp: new Date(),
+      }]);
     } finally {
       setIsTyping(false);
     }
@@ -115,9 +85,6 @@ const ChatPage = () => {
   return (
     <div className="flex min-h-screen bg-black text-white">
       <header className="p-4 flex justify-between items-center">
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-          <MenuIcon size={24} />
-        </button>
         <h1 className="text-2xl font-bold">Chat</h1>
         <LogoutButton />
       </header>
@@ -133,7 +100,6 @@ const ChatPage = () => {
                 </div>
               </div>
             ))}
-            {isTyping && <div className="text-gray-400">AI is typing...</div>}
             <div ref={messagesEndRef} />
           </div>
           <div className="flex items-center">

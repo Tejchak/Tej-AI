@@ -9,6 +9,8 @@ import { createClient } from '@/utils/supabase/client'
 import { Button } from "@/components/ui/button"
 import { redirect } from 'next/navigation'
 import { signOutAction } from "@/app/actions"
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   id: string
@@ -21,6 +23,16 @@ interface ChatSession {
   id: string
   title: string
   created_at: string
+  timestamp: string
+  messages: Message[]
+}
+
+interface DatabaseSession {
+  session_id: string
+  title: string
+  timestamp: string
+  content: string
+  sender: string
 }
 
 const fadeInUp = {
@@ -34,7 +46,12 @@ const staggerChildren = {
 }
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>([{
+    id: uuidv4(),
+    content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
+    sender: 'assistant',
+    timestamp: new Date().toISOString()
+  }])
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -55,23 +72,31 @@ export default function ChatPage() {
         return
       }
 
+      if (!sessions) return
+
       // Group messages by session_id and use the first message's title
-      const groupedSessions = sessions.reduce((acc: any, curr) => {
+      const groupedSessions = sessions.reduce((acc: Record<string, ChatSession>, curr: DatabaseSession) => {
         if (!acc[curr.session_id]) {
           acc[curr.session_id] = {
             id: curr.session_id,
             title: curr.title,
             timestamp: curr.timestamp,
+            created_at: curr.timestamp,
             messages: []
           }
         }
-        acc[curr.session_id].messages.push(curr)
+        acc[curr.session_id].messages.push({
+          id: uuidv4(),
+          content: curr.content,
+          sender: curr.sender === 'Machine' ? 'assistant' : 'user',
+          timestamp: curr.timestamp
+        })
         return acc
       }, {})
 
       // Convert to array and sort by latest message
-      const sessionArray = Object.values(groupedSessions)
-      sessionArray.sort((a: any, b: any) => 
+      const sessionArray = Object.values(groupedSessions) as ChatSession[]
+      sessionArray.sort((a: ChatSession, b: ChatSession) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       )
 
@@ -89,7 +114,10 @@ export default function ChatPage() {
   // Load messages when session changes
   useEffect(() => {
     const loadMessages = async () => {
-      if (!currentSessionId) return
+      if (!currentSessionId) {
+        // Keep the default welcome message when no session is selected
+        return
+      }
       
       const { data: messages, error } = await supabase
         .from('chat_sessions')
@@ -102,12 +130,23 @@ export default function ChatPage() {
         return
       }
 
-      setMessages(messages.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        sender: msg.sender === 'Machine' ? 'assistant' : 'user',
-        timestamp: msg.timestamp
-      })))
+      if (messages && messages.length > 0) {
+        const { data: { user } } = await supabase.auth.getUser()
+        // Start with welcome message and add loaded messages
+        const welcomeMessage = {
+          id: uuidv4(),
+          content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
+          sender: 'assistant',
+          timestamp: new Date().toISOString()
+        }
+        const loadedMessages = messages.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          sender: msg.sender === (user?.email || 'user') ? 'user' : 'assistant',
+          timestamp: msg.timestamp
+        }))
+        setMessages([welcomeMessage, ...loadedMessages])
+      }
     }
 
     loadMessages()
@@ -122,9 +161,14 @@ export default function ChatPage() {
     scrollToBottom()
   }, [messages])
 
-  const startNewChat = () => {
-    setCurrentSessionId(null)  // Clear the current session
-    setMessages([])         // Clear messages
+  const startNewChat = async () => {
+    setCurrentSessionId(null)
+    setMessages([{
+      id: uuidv4(),
+      content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
+      sender: 'assistant',
+      timestamp: new Date().toISOString()
+    }])
   }
 
   const selectSession = async (sessionId: string) => {
@@ -132,13 +176,13 @@ export default function ChatPage() {
     setMessages([]) // Clear messages before loading new ones
   }
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputMessage.trim() || isLoading) return
 
-    setIsLoading(true)
-    const messageText = inputMessage.trim()
+    const messageText = inputMessage
     setInputMessage("")
+    setIsLoading(true)
 
     // Add user message immediately
     const userMessage = {
@@ -187,7 +231,7 @@ export default function ChatPage() {
 
       const data = await response.json()
       
-      // Add AI response after receiving it
+      // Add AI response while preserving existing messages
       const aiMessage = {
         id: uuidv4(),
         content: data.message,
@@ -208,6 +252,23 @@ export default function ChatPage() {
       setIsLoading(false)
     }
   }
+
+  // AI Typing Indicator component
+  const TypingIndicator = () => (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={fadeInUp}
+      className="flex items-center space-x-2 p-4"
+    >
+      <div className="flex space-x-1">
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+      </div>
+      <span className="text-sm text-gray-400">AI is typing...</span>
+    </motion.div>
+  )
 
   // If we're server-side or not yet initialized, show a loading state
   if (!supabase) {
@@ -286,32 +347,74 @@ export default function ChatPage() {
           </div>
         ) : (
           // Chat messages
-          <div className="flex-1 overflow-y-auto p-4 bg-gray-950">
-            {messages.map((message, index) => (
-              <div
-                key={message.id}
-                className={`mb-4 flex ${
-                  message.sender === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                <div
-                  className={`rounded-lg p-3 max-w-[80%] ${
-                    message.sender === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-100'
-                  }`}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950">
+            <motion.div
+              variants={staggerChildren}
+              initial="hidden"
+              animate="visible"
+              className="space-y-4"
+            >
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  variants={fadeInUp}
+                  className={cn(
+                    "flex items-start space-x-2 p-4 rounded-lg",
+                    message.sender === 'user' 
+                      ? "bg-blue-600 text-white ml-auto max-w-[80%]" 
+                      : "bg-gray-800 text-gray-100 max-w-[80%]"
+                  )}
                 >
-                  {message.content}
-                </div>
-              </div>
-            ))}
+                  <div className="flex-1 overflow-hidden prose prose-invert max-w-none">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({children}) => <p className="mb-2 text-gray-100">{children}</p>,
+                        a: ({children, href}) => (
+                          <a href={href} className="text-blue-400 hover:underline">
+                            {children}
+                          </a>
+                        ),
+                        ul: ({children}) => <ul className="list-disc list-inside mb-4">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal list-inside mb-4">{children}</ol>,
+                        li: ({children}) => <li className="mb-1">{children}</li>,
+                        h1: ({children}) => <h1 className="text-2xl font-bold mb-4">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-xl font-bold mb-3">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-lg font-bold mb-2">{children}</h3>,
+                        pre: ({children}) => (
+                          <pre className="bg-gray-800 p-4 rounded-lg overflow-x-auto mb-4">
+                            {children}
+                          </pre>
+                        ),
+                        code: ({children}) => (
+                          <code className="bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">
+                            {children}
+                          </code>
+                        ),
+                        blockquote: ({children}) => (
+                          <blockquote className="border-l-4 border-gray-600 pl-4 italic my-4">
+                            {children}
+                          </blockquote>
+                        ),
+                        hr: () => <hr className="border-gray-600 my-8" />,
+                        strong: ({children}) => <strong className="font-bold">{children}</strong>,
+                        em: ({children}) => <em className="italic">{children}</em>,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+            {isLoading && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
         )}
 
         {/* Input Area */}
         <div className="border-t border-gray-800 p-4 bg-gray-900">
-          <form onSubmit={handleSendMessage} className="flex items-center">
+          <form onSubmit={handleSubmit} className="flex items-center">
             <input
               type="text"
               value={inputMessage}

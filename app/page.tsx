@@ -204,12 +204,7 @@ function LandingHero() {
       <motion.div className="text-center relative z-10" initial="hidden" animate="visible" variants={staggerChildren}>
         <motion.h1 className="text-4xl sm:text-6xl font-bold mb-6 text-white" variants={fadeInUp}>
           Welcome to the Future of
-          <motion.span
-            className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300"
-            variants={glowingText}
-          >
             AI Interaction
-          </motion.span>
         </motion.h1>
         <motion.p className="text-xl sm:text-2xl mb-12 max-w-2xl mx-auto text-blue-50" variants={fadeInUp}>
           Experience natural conversations, personalized interactions, and powerful code analysis with our cutting-edge AI.

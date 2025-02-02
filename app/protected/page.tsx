@@ -195,43 +195,19 @@ export default function ChatPage() {
   }
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading || !userId) return
-    
-    setIsLoading(true)
-    const messageId = uuidv4()
-    const timestamp = new Date().toISOString()
+    if (!inputMessage.trim()) return;
 
-    // Create a new session if none exists
-    const sessionId = currentSessionId || uuidv4()
-    if (!currentSessionId) {
-      setCurrentSessionId(sessionId)
-    }
-
-    // Add user message to UI
-    const userMessage: Message = {
-      id: messageId,
+    const newMessage: Message = {
+      id: uuidv4(),
       content: inputMessage,
       sender: 'user',
-      timestamp
-    }
+      timestamp: new Date(),
+    };
 
-    setMessages(prevMessages => [...prevMessages, userMessage])
-    setInputMessage("")
+    setMessages(prevMessages => [...prevMessages, newMessage]);
+    setInputMessage('');
 
     try {
-      // Save user message to database first
-      const { error: userSaveError } = await supabase
-        .from('chat_sessions')
-        .insert([{
-          session_id: sessionId,
-          content: inputMessage,
-          sender: 'user',
-          timestamp: timestamp,
-          title: inputMessage.slice(0, 50),
-          user_id: userId
-        }])
-
-      // Get AI response
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -239,52 +215,44 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           message: inputMessage,
-          sessionId,
-          userId
+          sessionId: currentSessionId,
+          userId: user?.id
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
       
-      // Add AI response to UI
+      if (!response.ok) {
+        console.error('API Error:', data);
+        const errorMessage: Message = {
+          id: uuidv4(),
+          content: `Error (${response.status}): ${data.error}\nDetails: ${JSON.stringify(data.details, null, 2)}`,
+          sender: 'system',
+          timestamp: new Date(),
+        };
+        setMessages(prevMessages => [...prevMessages, errorMessage]);
+        return;
+      }
+
       const aiMessage: Message = {
         id: uuidv4(),
         content: data.response,
         sender: 'assistant',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date(),
+      };
 
-      setMessages(prevMessages => [...prevMessages, aiMessage])
-
-      // Save AI response to database
-      const { error: aiSaveError } = await supabase
-        .from('chat_sessions')
-        .insert([{
-          session_id: sessionId,
-          content: data.response,
-          sender: 'assistant',
-          timestamp: new Date().toISOString(),
-          title: inputMessage.slice(0, 50),
-          user_id: userId
-        }])
-
-      // Reload chat sessions to update the list
-      await loadChatSessions()
+      setMessages(prevMessages => [...prevMessages, aiMessage]);
     } catch (error) {
-      // Add a friendly error message to the chat
-      setMessages(prevMessages => [
-        ...prevMessages,
-        {
-          id: uuidv4(),
-          content: "I apologize, but I'm having trouble responding right now. Please try again in a moment.",
-          sender: 'assistant',
-          timestamp: new Date().toISOString()
-        }
-      ])
-    } finally {
-      setIsLoading(false)
+      console.error('Network Error:', error);
+      const errorMessage: Message = {
+        id: uuidv4(),
+        content: `Network Error: ${error instanceof Error ? error.message : 'Failed to connect to server'}`,
+        sender: 'system',
+        timestamp: new Date(),
+      };
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
     }
-  }
+  };
 
   // AI Typing Indicator component
   const TypingIndicator = () => (

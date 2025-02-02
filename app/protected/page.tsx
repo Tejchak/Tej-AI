@@ -194,8 +194,9 @@ export default function ChatPage() {
     }])
   }
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isLoading || !userId) return
+  const handleSendMessage = async (messageToSend?: string) => {
+    const message = messageToSend || inputMessage;
+    if (!message.trim() || isLoading || !userId) return
     
     setIsLoading(true)
     const messageId = uuidv4()
@@ -210,7 +211,7 @@ export default function ChatPage() {
     // Add user message to UI
     const userMessage: Message = {
       id: messageId,
-      content: inputMessage,
+      content: message,
       sender: 'user',
       timestamp: new Date().toISOString()
     }
@@ -224,10 +225,10 @@ export default function ChatPage() {
         .from('chat_sessions')
         .insert([{
           session_id: sessionId,
-          content: inputMessage,
+          content: message,
           sender: 'user',
           timestamp: timestamp,
-          title: inputMessage.slice(0, 50),
+          title: message.slice(0, 50),
           user_id: userId
         }])
 
@@ -238,7 +239,7 @@ export default function ChatPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: inputMessage,
+          message: message,
           sessionId,
           userId
         })
@@ -264,7 +265,7 @@ export default function ChatPage() {
           content: data.response,
           sender: 'assistant',
           timestamp: new Date().toISOString(),
-          title: inputMessage.slice(0, 50),
+          title: message.slice(0, 50),
           user_id: userId
         }])
 
@@ -285,6 +286,12 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false)
     }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    if (isLoading) return;
+    
+    handleSendMessage(suggestion);
   };
 
   // AI Typing Indicator component
@@ -451,25 +458,34 @@ export default function ChatPage() {
           {/* Suggestion Buttons */}
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
             <button
-              onClick={() => setInputMessage("Should I invest in Meta?")}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
-            >
-              <TrendingUp className="w-4 h-4" />
-              Should I invest in Meta?
-            </button>
-            <button
-              onClick={() => setInputMessage("Write python code to return the fibonacci sequence.")}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
+              onClick={() => handleSuggestionClick("Write python code to return the fibonacci sequence.")}
+              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                isLoading ? 'opacity-50 pointer-events-none' : ''
+              }`}
+              disabled={isLoading}
             >
               <TrendingUp className="w-4 h-4" />
               Write python code to return the fibonacci sequence.
             </button>
             <button
-              onClick={() => setInputMessage("How is the stock market today?")}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
+              onClick={() => handleSuggestionClick("How is the stock market today?")}
+              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                isLoading ? 'opacity-50 pointer-events-none' : ''
+              }`}
+              disabled={isLoading}
             >
               <DollarSign className="w-4 h-4" />
               How is the stock market today?
+            </button>
+            <button
+              onClick={() => handleSuggestionClick("Should I invest in Meta?")}
+              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                isLoading ? 'opacity-50 pointer-events-none' : ''
+              }`}
+              disabled={isLoading}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Should I invest in Meta?
             </button>
           </div>
           

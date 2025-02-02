@@ -135,6 +135,12 @@ export default function ChatPage() {
     const loadMessages = async () => {
       if (!currentSessionId) {
         // Keep the default welcome message when no session is selected
+        setMessages([{
+          id: uuidv4(),
+          content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
+          sender: 'assistant',
+          timestamp: new Date().toISOString()
+        }])
         return
       }
       
@@ -149,27 +155,25 @@ export default function ChatPage() {
         return
       }
 
-      if (messages && messages.length > 0) {
-        const { data: { user } } = await supabase.auth.getUser()
-        // Start with welcome message and add loaded messages
-        const welcomeMessage = {
-          id: uuidv4(),
-          content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
-          sender: 'assistant',
-          timestamp: new Date().toISOString()
-        }
-        const loadedMessages = messages.map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          sender: msg.sender === (user?.email || 'user') ? 'user' : 'assistant',
-          timestamp: msg.timestamp
-        }))
-        setMessages([welcomeMessage, ...loadedMessages])
-      }
+      if (!messages) return
+
+      // Convert messages to the correct format
+      const formattedMessages = messages.map(msg => ({
+        id: uuidv4(),
+        content: msg.content,
+        sender: msg.sender === 'assistant' ? 'assistant' : 'user',
+        timestamp: msg.timestamp
+      }))
+
+      setMessages(formattedMessages)
     }
 
     loadMessages()
   }, [currentSessionId])
+
+  const handleSelectSession = async (sessionId: string) => {
+    setCurrentSessionId(sessionId)
+  }
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -188,11 +192,6 @@ export default function ChatPage() {
       sender: 'assistant',
       timestamp: new Date().toISOString()
     }])
-  }
-
-  const selectSession = async (sessionId: string) => {
-    setCurrentSessionId(sessionId)
-    setMessages([]) // Clear messages before loading new ones
   }
 
   const handleSendMessage = async () => {
@@ -220,6 +219,22 @@ export default function ChatPage() {
     setInputMessage("")
 
     try {
+      // Save user message to database first
+      const { error: userSaveError } = await supabase
+        .from('chat_sessions')
+        .insert([{
+          session_id: sessionId,
+          content: inputMessage,
+          sender: 'user',
+          timestamp: timestamp,
+          title: inputMessage.slice(0, 50),
+          user_id: userId
+        }])
+
+      if (userSaveError) {
+        throw new Error(`Error saving user message: ${userSaveError.message}`)
+      }
+
       // Get AI response
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -253,47 +268,25 @@ export default function ChatPage() {
 
       setMessages(prevMessages => [...prevMessages, aiMessage])
 
-      try {
-        // Save AI response to database
-        const { error: aiSaveError } = await supabase
-          .from('chat_sessions')
-          .insert([{
-            session_id: sessionId,
-            content: data.response,
-            sender: 'assistant',
-            timestamp: new Date().toISOString(),
-            title: inputMessage.slice(0, 50),
-            user_id: userId
-          }])
+      // Save AI response to database
+      const { error: aiSaveError } = await supabase
+        .from('chat_sessions')
+        .insert([{
+          session_id: sessionId,
+          content: data.response,
+          sender: 'assistant',
+          timestamp: new Date().toISOString(),
+          title: inputMessage.slice(0, 50),
+          user_id: userId
+        }])
 
-        if (aiSaveError) {
-          console.error('Error saving AI response:', aiSaveError)
-          throw new Error(`Error saving AI response: ${aiSaveError.message}`)
-        }
-
-        // Save user message to database
-        const { error: userSaveError } = await supabase
-          .from('chat_sessions')
-          .insert([{
-            session_id: sessionId,
-            content: inputMessage,
-            sender: 'user',
-            timestamp: timestamp,
-            title: inputMessage.slice(0, 50),
-            user_id: userId
-          }])
-
-        if (userSaveError) {
-          console.error('Error saving user message:', userSaveError)
-          throw new Error(`Error saving user message: ${userSaveError.message}`)
-        }
-
-        // Reload chat sessions to update the list
-        await loadChatSessions()
-      } catch (saveError) {
-        console.error('Error saving messages:', saveError)
-        // Don't throw here to keep the message in UI even if save fails
+      if (aiSaveError) {
+        console.error('Error saving AI response:', aiSaveError)
+        throw new Error(`Error saving AI response: ${aiSaveError.message}`)
       }
+
+      // Reload chat sessions to update the list
+      await loadChatSessions()
     } catch (error) {
       console.error('Error in chat flow:', error)
       // Show error in UI
@@ -352,7 +345,7 @@ export default function ChatPage() {
           {chatSessions.map((session) => (
             <button
               key={session.id}
-              onClick={() => selectSession(session.id)}
+              onClick={() => handleSelectSession(session.id)}
               className={`w-full text-left p-2 hover:bg-gray-800 rounded ${
                 currentSessionId === session.id ? 'bg-gray-800' : ''
               }`}
@@ -482,11 +475,11 @@ export default function ChatPage() {
               Should I invest in Meta?
             </button>
             <button
-              onClick={() => setInputMessage("Should I invest in OpenAI?")}
+              onClick={() => setInputMessage("Write python code to return the fibonacci sequence")}
               className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
             >
               <TrendingUp className="w-4 h-4" />
-              Should I invest in OpenAI?
+              Write python code to return the fibonacci sequence.
             </button>
             <button
               onClick={() => setInputMessage("How is the stock market today?")}

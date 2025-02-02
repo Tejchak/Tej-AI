@@ -212,7 +212,7 @@ export default function ChatPage() {
       id: messageId,
       content: inputMessage,
       sender: 'user',
-      timestamp
+      timestamp: new Date().toISOString()
     }
 
     setMessages(prevMessages => [...prevMessages, userMessage])

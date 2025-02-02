@@ -51,8 +51,8 @@ const features = [
   },
   {
     icon: Code,
-    title: "Code Analysis & Generation",
-    description: "Get help with coding tasks, from debugging to generating boilerplate code.",
+    title: "Financial Analysis",
+    description: "Get help with financial tasks, such as investment analysis and portfolio management.",
   },
 ]
 
@@ -106,8 +106,8 @@ function About() {
           neural networks. It's designed to understand and respond to your queries with human-like intelligence.
         </motion.p>
         <motion.p className="text-lg text-blue-200" variants={fadeInUp}>
-          Whether you're looking for a coding assistant, a data analyst, or just a friendly chat, our AI is here to
-          help. It's more than just a tool – it's your intelligent companion in the digital world.
+          Whether you're looking for a financial assistant, a data analyst, or just a friendly chat, our AI is here to
+          help. Scroll down to try it out now!
         </motion.p>
       </motion.div>
     </section>
@@ -133,36 +133,6 @@ const useCases = [
   },
 ]
 
-function UseCases() {
-  return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        className="max-w-7xl mx-auto"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-        variants={staggerChildren}
-      >
-        <motion.h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-blue-100" variants={fadeInUp}>
-          Use Cases
-        </motion.h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {useCases.map((useCase, index) => (
-            <motion.div
-              key={index}
-              className="bg-gradient-to-br from-blue-900 to-slate-900 rounded-lg p-6 shadow-lg border border-blue-800/20"
-              variants={fadeInUp}
-            >
-              <useCase.icon className="w-12 h-12 text-blue-400 mb-4" />
-              <h3 className="text-xl font-semibold mb-2 text-blue-100">{useCase.title}</h3>
-              <p className="text-blue-200">{useCase.description}</p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-    </section>
-  )
-}
 
 // CTA Component
 function CTA() {
@@ -207,7 +177,7 @@ function LandingHero() {
             AI Interaction
         </motion.h1>
         <motion.p className="text-xl sm:text-2xl mb-12 max-w-2xl mx-auto text-blue-50" variants={fadeInUp}>
-          Experience natural conversations, personalized interactions, and powerful code analysis with our cutting-edge AI.
+          Experience natural conversations, personalized interactions, and powerful financial analysis with our cutting-edge AI.
         </motion.p>
         <motion.div className="flex items-center justify-center gap-4" variants={fadeInUp}>
           <Link href="/sign-in">
@@ -234,7 +204,6 @@ export default function Home() {
         <LandingHero />
         <Features />
         <About />
-        <UseCases />
         <CTA />
       </div>
     </main>

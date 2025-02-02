@@ -10,12 +10,16 @@ export async function POST(request: Request) {
     try {
       requestBody = await request.json()
     } catch (error) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return NextResponse.json({ 
+        response: "I apologize, but I couldn't process that request. Could you try again?" 
+      })
     }
 
     const { message, sessionId, userId } = requestBody
     if (!message?.trim() || !sessionId || !userId) {
-      return NextResponse.json({ error: 'Message, sessionId, and userId are required' }, { status: 400 })
+      return NextResponse.json({ 
+        response: "I apologize, but something went wrong. Please try again or refresh the page." 
+      })
     }
 
     console.log('Saving user message to Supabase:', { sessionId, message })
@@ -23,7 +27,9 @@ export async function POST(request: Request) {
     // Call Langflow API
     console.log('Calling Langflow API...')
     if (!process.env.LANGFLOW_API_URL || !process.env.LANGFLOW_API_KEY) {
-      throw new Error('Langflow API configuration missing')
+      return NextResponse.json({ 
+        response: "I apologize, but I'm having trouble connecting to my services right now. Please try again in a moment." 
+      })
     }
 
     const langflowResponse = await fetch(process.env.LANGFLOW_API_URL, {
@@ -41,13 +47,9 @@ export async function POST(request: Request) {
     })
 
     if (!langflowResponse.ok) {
-      const errorText = await langflowResponse.text()
-      console.error('Langflow API error:', {
-        status: langflowResponse.status,
-        statusText: langflowResponse.statusText,
-        error: errorText
+      return NextResponse.json({ 
+        response: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment." 
       })
-      throw new Error(`Failed to get response from Langflow: ${langflowResponse.status} ${langflowResponse.statusText}`)
     }
 
     const data = await langflowResponse.json()
@@ -57,17 +59,18 @@ export async function POST(request: Request) {
     const aiMessage = data.outputs?.[0]?.outputs?.[0]?.artifacts?.message
 
     if (!aiMessage) {
-      console.error('Invalid Langflow response format:', data)
-      throw new Error('Invalid response format from Langflow')
+      return NextResponse.json({ 
+        response: "I apologize, but I couldn't generate a proper response. Could you rephrase your question?" 
+      })
     }
 
     console.log('Saving AI response to Supabase:', aiMessage)
 
     return NextResponse.json({ response: aiMessage })
   } catch (error) {
-    console.error('Error in chat API:', error)
+    // Return a user-friendly error message instead of exposing the error
     return NextResponse.json({ 
-      error: error instanceof Error ? error.message : 'Internal server error'
-    }, { status: 500 })
+      response: "I apologize, but something unexpected happened. Please try again in a moment." 
+    })
   }
 }

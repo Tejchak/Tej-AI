@@ -231,10 +231,6 @@ export default function ChatPage() {
           user_id: userId
         }])
 
-      if (userSaveError) {
-        throw new Error(`Error saving user message: ${userSaveError.message}`)
-      }
-
       // Get AI response
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -248,16 +244,8 @@ export default function ChatPage() {
         }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to get AI response')
-      }
-
       const data = await response.json()
       
-      if (!data.response) {
-        throw new Error('Invalid AI response format')
-      }
-
       // Add AI response to UI
       const aiMessage: Message = {
         id: uuidv4(),
@@ -280,21 +268,15 @@ export default function ChatPage() {
           user_id: userId
         }])
 
-      if (aiSaveError) {
-        console.error('Error saving AI response:', aiSaveError)
-        throw new Error(`Error saving AI response: ${aiSaveError.message}`)
-      }
-
       // Reload chat sessions to update the list
       await loadChatSessions()
     } catch (error) {
-      console.error('Error in chat flow:', error)
-      // Show error in UI
+      // Add a friendly error message to the chat
       setMessages(prevMessages => [
         ...prevMessages,
         {
           id: uuidv4(),
-          content: 'Sorry, there was an error processing your message. Please try again.',
+          content: "I apologize, but I'm having trouble responding right now. Please try again in a moment.",
           sender: 'assistant',
           timestamp: new Date().toISOString()
         }
@@ -475,7 +457,7 @@ export default function ChatPage() {
               Should I invest in Meta?
             </button>
             <button
-              onClick={() => setInputMessage("Write python code to return the fibonacci sequence")}
+              onClick={() => setInputMessage("Write python code to return the fibonacci sequence.")}
               className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
             >
               <TrendingUp className="w-4 h-4" />

@@ -220,23 +220,6 @@ export default function ChatPage() {
     setInputMessage("")
 
     try {
-      // Save user message to database
-      const { error: saveError } = await supabase
-        .from('chat_sessions')
-        .insert({
-          session_id: sessionId,
-          content: inputMessage,
-          sender: 'user',
-          timestamp,
-          title: inputMessage.slice(0, 50),
-          user_id: userId
-        })
-
-      if (saveError) {
-        console.error('Error saving message:', saveError)
-        return
-      }
-
       // Get AI response
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -251,11 +234,15 @@ export default function ChatPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get response')
+        throw new Error('Failed to get AI response')
       }
 
       const data = await response.json()
       
+      if (!data.response) {
+        throw new Error('Invalid AI response format')
+      }
+
       // Add AI response to UI
       const aiMessage: Message = {
         id: uuidv4(),
@@ -266,26 +253,59 @@ export default function ChatPage() {
 
       setMessages(prevMessages => [...prevMessages, aiMessage])
 
-      // Save AI response to database
-      const { error: aiSaveError } = await supabase
-        .from('chat_sessions')
-        .insert({
-          session_id: sessionId,
-          content: data.response,
-          sender: 'Machine',
-          timestamp: new Date().toISOString(),
-          title: inputMessage.slice(0, 50),
-          user_id: userId
-        })
+      try {
+        // Save AI response to database
+        const { error: aiSaveError } = await supabase
+          .from('chat_sessions')
+          .insert([{
+            session_id: sessionId,
+            content: data.response,
+            sender: 'assistant',
+            timestamp: new Date().toISOString(),
+            title: inputMessage.slice(0, 50),
+            user_id: userId
+          }])
 
-      if (aiSaveError) {
-        console.error('Error saving AI response:', aiSaveError)
+        if (aiSaveError) {
+          console.error('Error saving AI response:', aiSaveError)
+          throw new Error(`Error saving AI response: ${aiSaveError.message}`)
+        }
+
+        // Save user message to database
+        const { error: userSaveError } = await supabase
+          .from('chat_sessions')
+          .insert([{
+            session_id: sessionId,
+            content: inputMessage,
+            sender: 'user',
+            timestamp: timestamp,
+            title: inputMessage.slice(0, 50),
+            user_id: userId
+          }])
+
+        if (userSaveError) {
+          console.error('Error saving user message:', userSaveError)
+          throw new Error(`Error saving user message: ${userSaveError.message}`)
+        }
+
+        // Reload chat sessions to update the list
+        await loadChatSessions()
+      } catch (saveError) {
+        console.error('Error saving messages:', saveError)
+        // Don't throw here to keep the message in UI even if save fails
       }
-
-      // Reload chat sessions to update the list
-      loadChatSessions()
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error in chat flow:', error)
+      // Show error in UI
+      setMessages(prevMessages => [
+        ...prevMessages,
+        {
+          id: uuidv4(),
+          content: 'Sorry, there was an error processing your message. Please try again.',
+          sender: 'assistant',
+          timestamp: new Date().toISOString()
+        }
+      ])
     } finally {
       setIsLoading(false)
     }

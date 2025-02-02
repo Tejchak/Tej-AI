@@ -10,7 +10,6 @@ export async function POST(request: Request) {
     try {
       requestBody = await request.json()
     } catch (error) {
-      console.error('Error parsing request body:', error)
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
@@ -19,37 +18,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Message, sessionId, and userId are required' }, { status: 400 })
     }
 
-    // Get the authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      console.error('Auth error:', userError)
-      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
-    }
-
-    // Create chat title from the message
-    const chatTitle = message.length > 30 ? message.substring(0, 30) + '...' : message
-
-    // First save the user's message
     console.log('Saving user message to Supabase:', { sessionId, message })
-    const { error: userMessageError } = await supabase
-      .from('chat_sessions')
-      .insert({
-        session_id: sessionId,
-        user_id: user.id,
-        timestamp: new Date().toISOString(),
-        title: chatTitle,
-        sender: user.email || 'user',
-        content: message
-      })
-
-    if (userMessageError) {
-      console.error('Error saving user message:', userMessageError)
-      return NextResponse.json({ error: 'Failed to save user message' }, { status: 500 })
-    }
 
     // Call Langflow API
     console.log('Calling Langflow API...')
-    const response = await fetch(process.env.LANGFLOW_API_URL!, {
+    if (!process.env.LANGFLOW_API_URL || !process.env.LANGFLOW_API_KEY) {
+      throw new Error('Langflow API configuration missing')
+    }
+
+    const langflowResponse = await fetch(process.env.LANGFLOW_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,58 +34,40 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         input_value: message,
-        output_type: "chat",
-        input_type: "chat",
-        tweaks: {}
+        flow_id: process.env.LANGFLOW_FLOW_ID,
+        tweaks: {},
+        chat_history: []
       })
     })
 
-    if (!response.ok) {
-      console.error('Langflow API error:', response.status)
-      return NextResponse.json({ error: 'Failed to get AI response' }, { status: 500 })
+    if (!langflowResponse.ok) {
+      const errorText = await langflowResponse.text()
+      console.error('Langflow API error:', {
+        status: langflowResponse.status,
+        statusText: langflowResponse.statusText,
+        error: errorText
+      })
+      throw new Error(`Failed to get response from Langflow: ${langflowResponse.status} ${langflowResponse.statusText}`)
     }
 
-    const responseBody = await response.json()
-    console.log('Langflow API response:', JSON.stringify(responseBody, null, 2))
+    const data = await langflowResponse.json()
+    console.log('Langflow API response:', JSON.stringify(data, null, 2))
 
-    // Extract the AI message and timestamp
-    const timestamp = responseBody.outputs?.[0]?.outputs?.[0]?.results?.message?.timestamp || new Date().toISOString()
-    const aiMessage = responseBody.outputs?.[0]?.outputs?.[0]?.artifacts?.message
+    // Extract the actual message from the Langflow response
+    const aiMessage = data.outputs?.[0]?.outputs?.[0]?.artifacts?.message
 
     if (!aiMessage) {
-      console.error('No message in Langflow response:', responseBody)
-      return NextResponse.json({ error: 'Invalid response from AI' }, { status: 500 })
+      console.error('Invalid Langflow response format:', data)
+      throw new Error('Invalid response format from Langflow')
     }
 
-    // Save AI response
     console.log('Saving AI response to Supabase:', aiMessage)
-    const { error: aiMessageError } = await supabase
-      .from('chat_sessions')
-      .insert({
-        session_id: sessionId,
-        user_id: user.id,
-        timestamp: timestamp,
-        title: chatTitle,
-        sender: 'Machine',
-        content: aiMessage
-      })
 
-    if (aiMessageError) {
-      console.error('Error saving AI message:', aiMessageError)
-      // Continue anyway since we have the AI response
-    }
-
-    return NextResponse.json({
-      message: aiMessage,
-      timestamp,
-      sender: 'Machine',
-      session_id: sessionId,
-      flow_id: responseBody.session_id
-    })
+    return NextResponse.json({ response: aiMessage })
   } catch (error) {
-    console.error('Chat error:', error)
+    console.error('Error in chat API:', error)
     return NextResponse.json({ 
-      error: 'Internal Server Error: ' + (error as Error).message 
+      error: error instanceof Error ? error.message : 'Internal server error'
     }, { status: 500 })
   }
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { Send, MessageSquare, Image, FileText, BarChart3, Clock, Settings, LogOut } from "lucide-react"
+import { Send, MessageSquare, Image, FileText, BarChart3, Clock, Settings, LogOut, TrendingUp, DollarSign } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { v4 as uuidv4 } from 'uuid'
 import { createClient } from '@/utils/supabase/client'
@@ -472,6 +472,32 @@ export default function ChatPage() {
 
         {/* Input Area */}
         <div className="border-t border-gray-800 p-4 bg-gray-900">
+          {/* Suggestion Buttons */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+            <button
+              onClick={() => setInputMessage("Should I invest in Meta?")}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Should I invest in Meta?
+            </button>
+            <button
+              onClick={() => setInputMessage("Should I invest in OpenAI?")}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Should I invest in OpenAI?
+            </button>
+            <button
+              onClick={() => setInputMessage("How is the stock market today?")}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors"
+            >
+              <DollarSign className="w-4 h-4" />
+              How is the stock market today?
+            </button>
+          </div>
+          
+          {/* Message Input Form */}
           <form onSubmit={(e) => { e.preventDefault(); handleSendMessage() }} className="flex items-center">
             <input
               type="text"

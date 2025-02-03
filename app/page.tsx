@@ -197,7 +197,7 @@ function LandingHero() {
         </motion.div>
         <motion.div 
           className="flex justify-center cursor-pointer hover:text-blue-300 transition-colors"
-          animate={{ y: [0, 10, 0] }}
+          animate={{ y: [0, 10, 0], scale: [1, 1.1, 1] }}
           transition={{ 
             duration: 2,
             repeat: Infinity,
@@ -205,7 +205,7 @@ function LandingHero() {
           }}
           onClick={handleScroll}
         >
-          <ChevronDown className="w-8 h-8 text-blue-400" />
+          <ChevronDown className="w-12 h-12 text-blue-400" />
         </motion.div>
       </motion.div>
     </section>

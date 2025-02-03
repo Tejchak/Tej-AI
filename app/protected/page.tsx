@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { Send, MessageSquare, Image, FileText, BarChart3, Clock, Settings, LogOut, TrendingUp, DollarSign } from "lucide-react"
+import { Send, MessageSquare, Image, FileText, BarChart3, Clock, Settings, LogOut, TrendingUp, DollarSign, Code } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { v4 as uuidv4 } from 'uuid'
 import { createClient } from '@/utils/supabase/client'
@@ -363,150 +363,118 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {messages.length === 0 ? (
-          // Welcome screen with just the initial message
-          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-950">
-            <h2 className="text-xl text-gray-300 mb-4">Welcome to FinovaAI</h2>
-          </div>
-        ) : (
-          // Chat messages
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950">
-            <motion.div
-              variants={staggerChildren}
-              initial="hidden"
-              animate="visible"
-              className="space-y-4"
-            >
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  variants={fadeInUp}
-                  className={cn(
-                    "flex items-start space-x-2 p-4 rounded-lg",
-                    message.sender === 'user' 
-                      ? "bg-blue-600 text-white ml-auto max-w-[80%]" 
-                      : "bg-gray-800 text-gray-100 max-w-[80%]"
-                  )}
-                >
-                  <div className="flex-1 overflow-hidden prose prose-invert max-w-none">
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        p: ({children}) => <p className="mb-2 text-gray-100">{children}</p>,
-                        a: ({children, href}) => (
-                          <a href={href} className="text-blue-400 hover:underline">
-                            {children}
-                          </a>
-                        ),
-                        ul: ({children}) => <ul className="list-disc list-inside mb-4">{children}</ul>,
-                        ol: ({children}) => <ol className="list-decimal list-inside mb-4">{children}</ol>,
-                        li: ({children}) => <li className="mb-1">{children}</li>,
-                        h1: ({children}) => <h1 className="text-2xl font-bold mb-4">{children}</h1>,
-                        h2: ({children}) => <h2 className="text-xl font-bold mb-3">{children}</h2>,
-                        h3: ({children}) => <h3 className="text-lg font-bold mb-2">{children}</h3>,
-                        pre: ({children}) => (
-                          <pre className="bg-gray-800 p-4 rounded-lg overflow-x-auto mb-4">
-                            {children}
-                          </pre>
-                        ),
-                        code: ({children}) => (
-                          <code className="bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">
-                            {children}
-                          </code>
-                        ),
-                        blockquote: ({children}) => (
-                          <blockquote className="border-l-4 border-gray-600 pl-4 italic my-4">
-                            {children}
-                          </blockquote>
-                        ),
-                        hr: () => <hr className="border-gray-600 my-8" />,
-                        strong: ({children}) => <strong className="font-bold">{children}</strong>,
-                        em: ({children}) => <em className="italic">{children}</em>,
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950">
+          <motion.div
+            variants={staggerChildren}
+            initial="hidden"
+            animate="visible"
+            className="space-y-4"
+          >
+            {messages.map((message) => (
+              <motion.div
+                key={message.id}
+                variants={fadeInUp}
+                className={cn(
+                  "flex items-start gap-4 rounded-lg p-4",
+                  message.sender === "assistant"
+                    ? "bg-gray-800"
+                    : "bg-blue-600/20 ml-12"
+                )}
+              >
+                {message.sender === "assistant" && (
+                  <div className="rounded-full bg-blue-600 p-2 mt-1">
+                    <MessageSquare className="h-4 w-4 text-white" />
                   </div>
-                </motion.div>
-              ))}
-            </motion.div>
+                )}
+                <div className="flex-1 overflow-x-hidden">
+                  <ReactMarkdown
+                    className="prose prose-invert max-w-none"
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              </motion.div>
+            ))}
             {isLoading && <TypingIndicator />}
             <div ref={messagesEndRef} />
-          </div>
-        )}
+          </motion.div>
+        </div>
 
-        {/* Input Area */}
-        <div className="border-t border-gray-800 p-4 bg-gray-900">
-          {/* Suggestion Buttons */}
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-            <button
-              onClick={() => handleSuggestionClick("Write python code to return the fibonacci sequence.")}
-              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
-                isLoading ? 'opacity-50 pointer-events-none' : ''
-              }`}
-              disabled={isLoading}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Write python code to return the fibonacci sequence.
-            </button>
-            <button
-              onClick={() => handleSuggestionClick("How is the stock market today?")}
-              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
-                isLoading ? 'opacity-50 pointer-events-none' : ''
-              }`}
-              disabled={isLoading}
-            >
-              <DollarSign className="w-4 h-4" />
-              How is the stock market today?
-            </button>
-            <button
-              onClick={() => handleSuggestionClick("Write python code to calculate the x-day moving average for a given stock")}
-              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
-                isLoading ? 'opacity-50 pointer-events-none' : ''
-              }`}
-              disabled={isLoading}
-            >
-              <DollarSign className="w-4 h-4" />
-              Write python code to calculate the x-day moving average for a given stock.
-            </button>
-            <button
-              onClick={() => handleSuggestionClick("Should I invest in Meta?")}
-              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
-                isLoading ? 'opacity-50 pointer-events-none' : ''
-              }`}
-              disabled={isLoading}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Should I invest in Meta?
-            </button>
+        {/* Message Input */}
+        <div className="border-t border-gray-800 p-4 bg-gray-950">
+          <div className="flex flex-col gap-4">
+            {/* Suggestion Buttons */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+              <button
+                onClick={() => handleSuggestionClick("Write python code to return the fibonacci sequence.")}
+                className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                  isLoading ? 'opacity-50 pointer-events-none' : ''
+                }`}
+                disabled={isLoading}
+              >
+                <Code className="w-4 h-4" />
+                Write python code to return the fibonacci sequence.
+              </button>
+              <button
+                onClick={() => handleSuggestionClick("How is the stock market today?")}
+                className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                  isLoading ? 'opacity-50 pointer-events-none' : ''
+                }`}
+                disabled={isLoading}
+              >
+                <TrendingUp className="w-4 h-4" />
+                How is the stock market today?
+              </button>
+              <button
+                onClick={() => handleSuggestionClick("Write python code to calculate the x-day moving average for a given stock")}
+                className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                  isLoading ? 'opacity-50 pointer-events-none' : ''
+                }`}
+                disabled={isLoading}
+              >
+                <DollarSign className="w-4 h-4" />
+                Write python code to calculate the x-day moving average for a given stock.
+              </button>
+              <button
+                onClick={() => handleSuggestionClick("Should I invest in Meta?")}
+                className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                  isLoading ? 'opacity-50 pointer-events-none' : ''
+                }`}
+                disabled={isLoading}
+              >
+                <TrendingUp className="w-4 h-4" />
+                Should I invest in Meta?
+              </button>
+            </div>
+            
+            {/* Message Input Form */}
+            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage() }} className="flex items-center">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder="Message FinovaAI..."
+                className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !inputMessage.trim()}
+                className={`rounded-lg p-2 ${
+                  isLoading || !inputMessage.trim()
+                    ? 'bg-gray-700 text-gray-400'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                {isLoading ? (
+                  <Clock className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </button>
+            </form>
           </div>
-          
-          {/* Message Input Form */}
-          <form onSubmit={(e) => { e.preventDefault(); handleSendMessage() }} className="flex items-center">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Message FinovaAI..."
-              className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !inputMessage.trim()}
-              className={`rounded-lg p-2 ${
-                isLoading || !inputMessage.trim()
-                  ? 'bg-gray-700 text-gray-400'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`}
-            >
-              {isLoading ? (
-                <Clock className="h-5 w-5 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
-            </button>
-          </form>
         </div>
       </div>
     </div>

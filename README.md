@@ -1,14 +1,14 @@
-<img alt="FinovaAI - Your Intelligent Financial Companion" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">FinovaAI - Your Intelligent Financial Companion</h1>
-</a>
+<img alt="FinovaAI Landing Page" src="AI_Landing.png">
+<h1 align="center">FinovaAI - Your Intelligent Financial Companion</h1>
 
 <p align="center">
  At the intersection of finance and innovation, FinovaAI combines cutting-edge technology with financial expertise to provide personalized financial insights and assistance.
 </p>
 
 <p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
+  <img alt="FinovaAI in Action" src="AI_in_action.png" width="100%">
 </p>
+
 <br/>
 
 ## Features
@@ -29,4 +29,3 @@
 ## Demo
 
 You can view a fully working demo at [tej-ai.vercel.app](https://tej-ai.vercel.app/).
-

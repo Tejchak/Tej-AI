@@ -48,7 +48,7 @@ const staggerChildren = {
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([{
     id: uuidv4(),
-    content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
+    content: "Hello! I'm FinovaAI, your financial companion. How can I assist you today? Feel free to ask about investments, market analysis, or any other financial topics!",
     sender: 'assistant',
     timestamp: new Date().toISOString()
   }])
@@ -137,7 +137,7 @@ export default function ChatPage() {
         // Keep the default welcome message when no session is selected
         setMessages([{
           id: uuidv4(),
-          content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
+          content: "Hello! I'm FinovaAI, your financial companion. How can I assist you today? Feel free to ask about investments, market analysis, or any other financial topics!",
           sender: 'assistant',
           timestamp: new Date().toISOString()
         }])
@@ -188,7 +188,7 @@ export default function ChatPage() {
     setCurrentSessionId(null)
     setMessages([{
       id: uuidv4(),
-      content: "Hello! How can I assist you today? If you have any questions or need information on a specific topic, feel free to ask!",
+      content: "Hello! I'm FinovaAI, your financial companion. How can I assist you today? Feel free to ask about investments, market analysis, or any other financial topics!",
       sender: 'assistant',
       timestamp: new Date().toISOString()
     }])
@@ -307,7 +307,7 @@ export default function ChatPage() {
         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
       </div>
-      <span className="text-sm text-gray-400">AI is typing...</span>
+      <span className="text-sm text-gray-400">FinovaAI is typing...</span>
     </motion.div>
   )
 
@@ -364,27 +364,9 @@ export default function ChatPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {messages.length === 0 ? (
-          // Welcome screen
+          // Welcome screen with just the initial message
           <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-950">
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="text-center p-4">
-                <Image className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <div className="text-sm text-gray-300">Create and edit images</div>
-              </div>
-              <div className="text-center p-4">
-                <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <div className="text-sm text-gray-300">Write and format text</div>
-              </div>
-              <div className="text-center p-4">
-                <BarChart3 className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <div className="text-sm text-gray-300">Analyze data</div>
-              </div>
-              <div className="text-center p-4">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <div className="text-sm text-gray-300">Answer questions</div>
-              </div>
-            </div>
-            <h2 className="text-xl text-gray-300 mb-4">How can I help you today?</h2>
+            <h2 className="text-xl text-gray-300 mb-4">Welcome to FinovaAI</h2>
           </div>
         ) : (
           // Chat messages
@@ -478,6 +460,16 @@ export default function ChatPage() {
               How is the stock market today?
             </button>
             <button
+              onClick={() => handleSuggestionClick("Write python code to calculate the x-day moving average for a given stock")}
+              className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
+                isLoading ? 'opacity-50 pointer-events-none' : ''
+              }`}
+              disabled={isLoading}
+            >
+              <DollarSign className="w-4 h-4" />
+              Write python code to calculate the x-day moving average for a given stock.
+            </button>
+            <button
               onClick={() => handleSuggestionClick("Should I invest in Meta?")}
               className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm text-gray-300 whitespace-nowrap transition-colors ${
                 isLoading ? 'opacity-50 pointer-events-none' : ''
@@ -495,7 +487,7 @@ export default function ChatPage() {
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="Message AI..."
+              placeholder="Message FinovaAI..."
               className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
             />

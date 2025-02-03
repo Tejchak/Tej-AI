@@ -1,10 +1,10 @@
 <a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
+  <img alt="FinovaAI - Your Intelligent Financial Companion" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
+  <h1 align="center">FinovaAI - Your Intelligent Financial Companion</h1>
 </a>
 
 <p align="center">
- The fastest way to build apps with Next.js and Supabase, trigger redeployment
+ At the intersection of finance and innovation, FinovaAI combines cutting-edge technology with financial expertise to provide personalized financial insights and assistance.
 </p>
 
 <p align="center">
@@ -19,6 +19,12 @@
 
 ## Features
 
+- Natural Language Processing for intuitive financial conversations
+- Personalized interactions that remember your preferences
+- Advanced financial analysis and portfolio management
+- Built with Next.js and Supabase for a robust, scalable platform
+- Modern UI with Tailwind CSS and shadcn/ui
+- Secure authentication and data storage
 - Works across the entire [Next.js](https://nextjs.org) stack
   - App Router
   - Pages Router
@@ -27,7 +33,6 @@
   - Server
   - It just works!
 - supabase-ssr. A package to configure Supabase Auth to use cookies
-- Styling with [Tailwind CSS](https://tailwindcss.com)
 - Components with [shadcn/ui](https://ui.shadcn.com/)
 - Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
   - Environment variables automatically assigned to Vercel project

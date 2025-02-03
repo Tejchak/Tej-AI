@@ -3,10 +3,9 @@
 import React from "react"
 import { motion } from "framer-motion"
 import { Inter } from "next/font/google"
-import { MessageSquare, Code, Brain, BarChart, MessageCircle } from "lucide-react"
+import { MessageSquare, Code, Brain, BarChart, MessageCircle, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import Hero from "@/components/hero";
 import ConnectSupabaseSteps from "@/components/tutorial/connect-supabase-steps";
 import SignUpUserSteps from "@/components/tutorial/sign-up-user-steps";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
@@ -42,12 +41,12 @@ const features = [
   {
     icon: MessageSquare,
     title: "Natural Language Processing",
-    description: "Chat with our AI like you would with a human. It understands context and nuance.",
+    description: "Chat with FinovaAI like you would with a human. It understands context and nuance.",
   },
   {
     icon: Brain,
     title: "Personalized Interactions",
-    description: "Our AI remembers your preferences and past conversations for a tailored experience.",
+    description: "FinovaAI remembers your preferences and past conversations for a tailored experience.",
   },
   {
     icon: Code,
@@ -99,15 +98,13 @@ function About() {
         variants={staggerChildren}
       >
         <motion.h2 className="text-3xl sm:text-4xl font-bold mb-6 text-blue-100" variants={fadeInUp}>
-          About Our AI
+          About FinovaAI
         </motion.h2>
         <motion.p className="text-lg mb-8 text-blue-200" variants={fadeInUp}>
-          Our AI is built on cutting-edge technology, combining natural language processing, machine learning, and deep
-          neural networks. It's designed to understand and respond to your queries with human-like intelligence.
+          At the intersection of finance and innovation, FinovaAI combines cutting-edge technology with financial expertise. Built on advanced natural language processing and machine learning, it's designed to be your intelligent financial companion.
         </motion.p>
         <motion.p className="text-lg text-blue-200" variants={fadeInUp}>
-          Whether you're looking for a financial assistant, a data analyst, or just a friendly chat, our AI is here to
-          help. Scroll down to try it out now!
+          Whether you're looking for a financial assistant, a data analyst, or just a friendly chat, FinovaAI is here to help. Scroll down to try it out now!
         </motion.p>
       </motion.div>
     </section>
@@ -139,18 +136,17 @@ function CTA() {
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8">
       <motion.div
-        className="max-w-4xl mx-auto text-center"
+        className="max-w-3xl mx-auto text-center"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.2 }}
         variants={staggerChildren}
       >
         <motion.h2 className="text-3xl sm:text-4xl font-bold mb-6 text-blue-100" variants={fadeInUp}>
-          Be Among the First to Experience the Future of AI
+          Be Among the First to Experience FinovaAI
         </motion.h2>
         <motion.p className="text-xl mb-8 text-blue-200" variants={fadeInUp}>
-          Our AI-powered platform is currently in beta testing. Join our exclusive group of early adopters and help
-          shape the future of AI interaction.
+          Our platform is currently in beta testing. Join our exclusive group of early adopters and help shape the future of AI Interaction.
         </motion.p>
         <motion.div variants={fadeInUp}>
           <Link href="/sign-up">
@@ -166,20 +162,28 @@ function CTA() {
 
 // Rename the local Hero component to LandingHero
 function LandingHero() {
+  const handleScroll = () => {
+    const featuresSection = document.getElementById('features');
+    if (featuresSection) {
+      const yOffset = -20; 
+      const y = featuresSection.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
   return (
     <section className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 relative">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900 via-slate-900 to-black opacity-70"></div>
       </div>
-      <motion.div className="text-center relative z-10" initial="hidden" animate="visible" variants={staggerChildren}>
-        <motion.h1 className="text-4xl sm:text-6xl font-bold mb-6 text-white" variants={fadeInUp}>
-          Welcome to the Future of
-            AI Interaction
+      <motion.div className="text-center relative z-10 w-full" initial="hidden" animate="visible" variants={staggerChildren}>
+        <motion.h1 className="text-4xl sm:text-6xl font-bold mb-2 text-white" variants={fadeInUp}>
+          Welcome to the Future of AI Interaction
         </motion.h1>
         <motion.p className="text-xl sm:text-2xl mb-12 max-w-2xl mx-auto text-blue-50" variants={fadeInUp}>
-          Experience natural conversations, personalized interactions, and powerful financial analysis with our cutting-edge AI.
+          Experience natural conversations, personalized interactions, and powerful financial analysis with FinovaAI
         </motion.p>
-        <motion.div className="flex items-center justify-center gap-4" variants={fadeInUp}>
+        <motion.div className="flex items-center justify-center gap-4 mb-16" variants={fadeInUp}>
           <Link href="/sign-in">
             <Button className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-6 text-lg rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]">
               Sign In
@@ -190,6 +194,18 @@ function LandingHero() {
               Sign Up
             </Button>
           </Link>
+        </motion.div>
+        <motion.div 
+          className="flex justify-center cursor-pointer hover:text-blue-300 transition-colors"
+          animate={{ y: [0, 10, 0] }}
+          transition={{ 
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          onClick={handleScroll}
+        >
+          <ChevronDown className="w-8 h-8 text-blue-400" />
         </motion.div>
       </motion.div>
     </section>

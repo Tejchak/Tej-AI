@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { getCachedResponse } from '@/utils/cache'
+import { predefinedResponses } from '@/utils/predefinedResponses'
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +26,23 @@ export async function POST(request: Request) {
       })
     }
 
+    // Check cache first for non-fallback responses
+    const cachedResponse = await getCachedResponse(message)
+    if (cachedResponse) {
+      console.log('Cache hit for query:', message)
+      return NextResponse.json({ response: cachedResponse })
+    }
+
+    // Check predefined responses (non-fallback only)
+    const predefinedResponse = predefinedResponses.find(pr => 
+      !pr.fallbackOnly && message.toLowerCase().includes(pr.query.toLowerCase())
+    )
+    if (predefinedResponse) {
+      console.log('Found predefined response for query:', message)
+      return NextResponse.json({ response: predefinedResponse.response })
+    }
+
+    // If no cache hit or predefined response, proceed with Langflow API
     console.log('Calling Langflow API...')
     if (!process.env.LANGFLOW_API_URL || !process.env.LANGFLOW_API_KEY) {
       console.error('Missing API configuration')
@@ -75,6 +94,16 @@ export async function POST(request: Request) {
 
     if (!aiMessage) {
       console.error('Failed to extract message from response')
+      
+      // Check for fallback responses when API fails
+      const fallbackResponse = predefinedResponses.find(pr => 
+        pr.fallbackOnly && message.toLowerCase().includes(pr.query.toLowerCase())
+      )
+      if (fallbackResponse) {
+        console.log('Using fallback response for query:', message)
+        return NextResponse.json({ response: fallbackResponse.response })
+      }
+
       return NextResponse.json({ 
         response: "I apologize, but I couldn't generate a proper response. Could you rephrase your question?" 
       })

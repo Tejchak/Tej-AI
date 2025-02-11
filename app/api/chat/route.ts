@@ -36,13 +36,24 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.LANGFLOW_API_KEY}`,
-        'Origin': process.env.VERCEL_URL || 'http://localhost:3000'
+        'Authorization': `Bearer ${process.env.LANGFLOW_API_KEY}`
       },
       body: JSON.stringify({
         input_value: message,
-        tweaks: {},
-        chat_history: []
+        output_type: "chat",
+        input_type: "chat",
+        tweaks: {
+          "OpenAIToolsAgent-FJkgE": {},
+          "PythonREPLTool-trBxe": {},
+          "YahooFinanceTool-vPwJs": {},
+          "WikipediaAPI-Czz1N": {},
+          "OpenAIModel-4oJMD": {},
+          "ChatInput-PcmTm": {
+            "session_id": sessionId
+          },
+          "Prompt-fTO3j": {},
+          "ChatOutput-L5AHB": {}
+        }
       })
     })
 

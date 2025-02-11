@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       clearTimeout(timeoutId);
       
       // Handle timeout or other fetch errors
-      if (error?.name === 'AbortError') {
+      if (typeof error?.name === 'string' && error.name.includes('AbortError')) {
         console.error('Langflow API timeout after 15 seconds')
       } else {
         console.error('Unexpected error:', error)

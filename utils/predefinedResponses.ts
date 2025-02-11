@@ -45,37 +45,42 @@ This code:
 3. Computes the moving average of closing prices over the specified days
 4. Returns a DataFrame with closing prices and moving average
 
-Replace 'AAPL' with any stock symbol and adjust the days variable as needed.`
+Replace 'AAPL' with any stock symbol and adjust the days variable as needed.`,
+    fallbackOnly: true  // Now this will only be used when the API fails
   },
   {
     query: "Should I invest in Meta",
-    response: `Here's an analysis of Meta Platforms, Inc. (META) based on the latest financial data:
+    response: `Investment Analysis for Meta Platforms, Inc. (META)
 
-Financial Performance
-Revenue: $156.23 billion
-Net Income: $55.54 billion
-Earnings Growth: 37.4% (year-over-year)
-Profit Margin: 35.55%
-Operating Margin: 42.77%
-Return on Equity: 36.13%
-Debt to Equity Ratio: 29.81 (indicating a moderate level of debt)
+Financial Overview
+• Market Cap: $1.82 trillion
+• 52-Week Range: $414.50 - $725.01
+• 52-Week Change: +55.92%
+• Earnings Growth: 37.4%
+• Revenue Growth: 19.9%
+• Profit Margin: 35.55%
+• Operating Margin: 42.76%
+• Beta: 1.215 (indicating higher volatility compared to the market)
+• Dividend Yield: 0.3% (with a dividend rate of $2.00)
 
 Analyst Recommendations
-Recommendation: Buy
-Target Mean Price: $757.69
-Target High Price: $935.00
-Target Low Price: $505.00
+• Recommendation Key: Buy
+• Mean Target Price: $757.69
+• Analyst Opinions: 58 analysts have provided opinions, indicating a generally positive outlook.
 
-Dividends
-Dividend Rate: $2.00
-Dividend Yield: 0.30%
+Company Overview
+Meta Platforms, Inc., formerly known as Facebook, Inc., is a leading technology conglomerate based in Menlo Park, California. The company operates major platforms such as Facebook, Instagram, WhatsApp, and Threads. Advertising constitutes 97.5% of its revenue. In 2021, the company rebranded to reflect its focus on building the metaverse, an integrated environment linking its various products and services.
 
-Summary
-Meta Platforms, Inc. has shown strong financial performance with significant earnings growth and a solid profit margin. The stock has a "buy" recommendation from analysts, with a target mean price above the current price, suggesting potential for growth. However, the stock is also relatively volatile, as indicated by its beta value.
+Meta is recognized as one of the largest American IT companies, alongside giants like Google, Amazon, Apple, and Microsoft. The company has made significant investments in research and development, spending approximately $35.3 billion in 2022.
+
+Legal Considerations
+Meta is currently involved in ongoing antitrust litigation with the Federal Trade Commission (FTC), which alleges that the company has engaged in anti-competitive practices through its acquisitions of Instagram and WhatsApp. This legal situation could impact investor sentiment and stock performance.
 
 Conclusion
-Based on the current financial data and analyst recommendations, investing in Meta could be a good opportunity, especially if you are looking for growth in the technology sector. However, consider your risk tolerance and investment strategy before making a decision.`,
-    fallbackOnly: true // Only use this response when the API fails
+Based on the financial data and analyst recommendations, investing in Meta Platforms, Inc. appears to be a favorable option, especially considering its strong earnings and revenue growth, as well as a positive analyst outlook. However, potential investors should also consider the ongoing legal challenges that could affect the company's future performance.
+
+Recommendation: If you are comfortable with the associated risks, particularly regarding legal issues, investing in Meta could be a good opportunity given its growth potential and market position.`,
+    fallbackOnly: true
   }
   // Add more predefined responses here as requested
 ];

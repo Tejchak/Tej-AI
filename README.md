@@ -28,4 +28,4 @@
 
 ## Demo
 
-You can view a fully working demo at [tej-ai.vercel.app](https://tej-ai.vercel.app/).
+You can view a fully working demo at [tej-ai.vercel.app](https://tej-ai.vercel.app/)

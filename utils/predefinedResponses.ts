@@ -25,7 +25,7 @@ import yfinance as yf
 
 def calculate_moving_average(stock_symbol, days):
     # Fetch historical data for the stock
-    stock_data = yf.download(stock_symbol, period='1y')  # Get 1 year of data
+    stock_data = yf.download(stock_symbol, period='1y')  // Get 1 year of data
     
     # Calculate the moving average
     stock_data['Moving Average'] = stock_data['Close'].rolling(window=days).mean()
@@ -33,8 +33,8 @@ def calculate_moving_average(stock_symbol, days):
     return stock_data[['Close', 'Moving Average']]
 
 # Example usage
-stock_symbol = 'AAPL'  # Replace with your stock symbol
-days = 20  # Replace with the number of days for the moving average
+stock_symbol = 'AAPL'  // Replace with your stock symbol
+days = 20  // Replace with the number of days for the moving average
 moving_average_data = calculate_moving_average(stock_symbol, days)
 print(moving_average_data)
 \`\`\`
@@ -53,19 +53,31 @@ Replace 'AAPL' with any stock symbol and adjust the days variable as needed.`,
     response: `Investment Analysis for Meta Platforms, Inc. (META)
 
 Financial Overview
+
 • Market Cap: $1.82 trillion
+
 • 52-Week Range: $414.50 - $725.01
+
 • 52-Week Change: +55.92%
+
 • Earnings Growth: 37.4%
+
 • Revenue Growth: 19.9%
+
 • Profit Margin: 35.55%
+
 • Operating Margin: 42.76%
+
 • Beta: 1.215 (indicating higher volatility compared to the market)
+
 • Dividend Yield: 0.3% (with a dividend rate of $2.00)
 
 Analyst Recommendations
+
 • Recommendation Key: Buy
+
 • Mean Target Price: $757.69
+
 • Analyst Opinions: 58 analysts have provided opinions, indicating a generally positive outlook.
 
 Company Overview

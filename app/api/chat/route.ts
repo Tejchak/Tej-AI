@@ -34,61 +34,94 @@ export async function POST(request: Request) {
       })
     }
 
-    const langflowResponse = await fetch(process.env.LANGFLOW_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.LANGFLOW_API_KEY}`
-      },
-      body: JSON.stringify({
-        input_value: message,
-        output_type: "chat",
-        input_type: "chat",
-        tweaks: {
-          "OpenAIToolsAgent-FJkgE": {},
-          "PythonREPLTool-trBxe": {},
-          "YahooFinanceTool-vPwJs": {},
-          "WikipediaAPI-Czz1N": {},
-          "OpenAIModel-4oJMD": {},
-          "ChatInput-PcmTm": {
-            "session_id": sessionId
-          },
-          "Prompt-fTO3j": {},
-          "ChatOutput-L5AHB": {}
+    // Set up timeout controller
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+    try {
+      const langflowResponse = await fetch(process.env.LANGFLOW_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.LANGFLOW_API_KEY}`
+        },
+        body: JSON.stringify({
+          input_value: message,
+          output_type: "chat",
+          input_type: "chat",
+          tweaks: {
+            "OpenAIToolsAgent-FJkgE": {},
+            "PythonREPLTool-trBxe": {},
+            "YahooFinanceTool-vPwJs": {},
+            "WikipediaAPI-Czz1N": {},
+            "OpenAIModel-4oJMD": {},
+            "ChatInput-PcmTm": {
+              "session_id": sessionId
+            },
+            "Prompt-fTO3j": {},
+            "ChatOutput-L5AHB": {}
+          }
+        }),
+        signal: controller.signal // Add abort signal to the fetch
+      })
+
+      clearTimeout(timeoutId); // Clear timeout if request succeeds
+
+      if (!langflowResponse.ok) {
+        console.error('Langflow API error:', {
+          status: langflowResponse.status,
+          statusText: langflowResponse.statusText
+        })
+
+        // Check for fallback responses when API fails
+        const fallbackResponse = predefinedResponses.find(pr => 
+          pr.fallbackOnly && message.toLowerCase().includes(pr.query.toLowerCase())
+        )
+        if (fallbackResponse) {
+          console.log('Using fallback response for query:', message)
+          return NextResponse.json({ response: fallbackResponse.response })
         }
-      })
-    })
 
-    if (!langflowResponse.ok) {
-      console.error('Langflow API error:', {
-        status: langflowResponse.status,
-        statusText: langflowResponse.statusText
-      })
-
-      // Check for fallback responses when API fails
-      const fallbackResponse = predefinedResponses.find(pr => 
-        pr.fallbackOnly && message.toLowerCase().includes(pr.query.toLowerCase())
-      )
-      if (fallbackResponse) {
-        console.log('Using fallback response for query:', message)
-        return NextResponse.json({ response: fallbackResponse.response })
+        return NextResponse.json({ 
+          response: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment." 
+        })
       }
 
-      return NextResponse.json({ 
-        response: "I apologize, but I'm having trouble processing your request right now. Please try again in a moment." 
-      })
-    }
+      const data = await langflowResponse.json()
+      console.log('Langflow API response:', JSON.stringify(data, null, 2))
 
-    const data = await langflowResponse.json()
-    console.log('Langflow API response:', JSON.stringify(data, null, 2))
+      // Extract the actual message from the Langflow response
+      const aiMessage = data.outputs?.[0]?.outputs?.[0]?.artifacts?.message
 
-    // Extract the actual message from the Langflow response
-    const aiMessage = data.outputs?.[0]?.outputs?.[0]?.artifacts?.message
+      if (!aiMessage) {
+        console.error('Failed to extract message from response')
+        
+        // Also check fallback responses if we can't extract a message
+        const fallbackResponse = predefinedResponses.find(pr => 
+          pr.fallbackOnly && message.toLowerCase().includes(pr.query.toLowerCase())
+        )
+        if (fallbackResponse) {
+          console.log('Using fallback response for query:', message)
+          return NextResponse.json({ response: fallbackResponse.response })
+        }
 
-    if (!aiMessage) {
-      console.error('Failed to extract message from response')
+        return NextResponse.json({ 
+          response: "I apologize, but I couldn't generate a proper response. Could you rephrase your question?" 
+        })
+      }
+
+      return NextResponse.json({ response: aiMessage })
+    } catch (error) {
+      clearTimeout(timeoutId); // Clear timeout on error
       
-      // Also check fallback responses if we can't extract a message
+      // Handle timeout or other fetch errors
+      if (error.name === 'AbortError') {
+        console.error('Langflow API timeout after 15 seconds')
+      } else {
+        console.error('Unexpected error:', error)
+      }
+
+      // Check for fallback responses when request fails
       const fallbackResponse = predefinedResponses.find(pr => 
         pr.fallbackOnly && message.toLowerCase().includes(pr.query.toLowerCase())
       )
@@ -98,11 +131,9 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ 
-        response: "I apologize, but I couldn't generate a proper response. Could you rephrase your question?" 
+        response: "I apologize, but I'm having trouble getting a response right now. Please try again in a moment." 
       })
     }
-
-    return NextResponse.json({ response: aiMessage })
   } catch (error) {
     console.error('Unexpected error:', error)
     return NextResponse.json({ 

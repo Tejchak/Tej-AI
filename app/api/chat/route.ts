@@ -62,10 +62,10 @@ export async function POST(request: Request) {
             "ChatOutput-L5AHB": {}
           }
         }),
-        signal: controller.signal // Add abort signal to the fetch
+        signal: controller.signal
       })
 
-      clearTimeout(timeoutId); // Clear timeout if request succeeds
+      clearTimeout(timeoutId);
 
       if (!langflowResponse.ok) {
         console.error('Langflow API error:', {
@@ -111,11 +111,11 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ response: aiMessage })
-    } catch (error) {
-      clearTimeout(timeoutId); // Clear timeout on error
+    } catch (error: any) {
+      clearTimeout(timeoutId);
       
       // Handle timeout or other fetch errors
-      if (error.name === 'AbortError') {
+      if (error?.name === 'AbortError') {
         console.error('Langflow API timeout after 15 seconds')
       } else {
         console.error('Unexpected error:', error)
